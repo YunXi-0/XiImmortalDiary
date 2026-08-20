@@ -83,6 +83,18 @@ html,body{width:100%;height:100%;overflow:hidden;font-family:"PingFang SC","Micr
 .attr-val{color:#555;font-weight:600}
 .shop-header{width:100%;display:flex;justify-content:space-between;align-items:center;padding:12px 0 8px;font-size:13px;color:#999}
 .shop-header .val{color:#555;font-weight:600}
+.craft-wrap{width:100%;max-width:420px;padding:0 16px;display:flex;flex-direction:column;flex:1;overflow-y:auto}
+.craft-tabs{display:flex;border-bottom:1px solid #eee;margin-bottom:12px}
+.craft-tab{flex:1;height:40px;border:none;background:#fff;font-size:13px;color:#aaa;cursor:pointer;border-bottom:2px solid transparent}
+.craft-tab.active{color:#555;border-bottom-color:#555}
+.recipe-row{display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid #f0f0f0}
+.recipe-slot{width:48px;height:48px;border:1px solid #ddd;border-radius:4px;background:#fafafa;display:flex;align-items:center;justify-content:center;font-size:10px;color:#888;text-align:center;word-break:break-all;padding:2px}
+.recipe-info{flex:1;font-size:12px;color:#666}
+.recipe-info .mat{color:#999}
+.recipe-info .count{color:#aaa;font-size:11px}
+.recipe-btn{height:32px;padding:0 12px;border:none;border-radius:4px;font-size:12px;font-weight:600;cursor:pointer;background:#f0f0f0;color:#555;border:1px solid #ddd}
+.recipe-btn:disabled{opacity:0.4;cursor:not-allowed}
+.craft-empty{font-size:13px;color:#ccc;text-align:center;padding:40px 0}
 </style>
 </head>
 <body>
@@ -119,6 +131,7 @@ html,body{width:100%;height:100%;overflow:hidden;font-family:"PingFang SC","Micr
 </div>
 <div class="page" id="pageStorage"><div class="page-wrap" id="storageWrap"></div></div>
 <div class="page" id="pageShop"><div class="page-wrap" id="shopWrap"></div></div>
+<div class="page" id="pageCraft"><div class="craft-wrap" id="craftWrap"></div></div>
 <div class="page" id="pageProfile">
 <div class="profile-wrap">
   <div class="equip-area">装备系统待开发</div>
@@ -130,6 +143,7 @@ html,body{width:100%;height:100%;overflow:hidden;font-family:"PingFang SC","Micr
   <button class="tab-btn" data-page="pageTravel">游历</button>
   <button class="tab-btn" data-page="pageStorage">存储</button>
   <button class="tab-btn" data-page="pageShop">商店</button>
+  <button class="tab-btn" data-page="pageCraft">制作</button>
   <button class="tab-btn" data-page="pageProfile">信息</button>
 </div>
 <script>
@@ -137,7 +151,11 @@ var SIZE_LIMITS={迷你:100,小:40,中:10,大:3,巨大:1};
 var ITEMS={
   faintSpirit:{name:'微弱灵气残影',desc:'弱小灵体在某处活动过的证据',quality:1,size:'迷你',maxStack:100,sellPrice:10,special:false,usable:true,usableDesc:'吸收后增加5%当前修为(上限100)'},
   mosquitoContainer:{name:'小雄蚊灵体容器',desc:'一个玻璃珠大小的金属球体，表面有着浅浅的纹路，散发着淡绿色的光，凑近听还有"嗡嗡"的声音。拥有后再击杀小雄蚊时，血量上限+1。(无上限)',quality:3,size:'中',maxStack:10,sellPrice:0,special:true},
-  herb:{name:'灵草',desc:'稍微有些灵气沾染的草而已',quality:1,size:'迷你',maxStack:100,sellPrice:5,special:false,usable:false}
+  herb:{name:'灵草',desc:'稍微有些灵气沾染的草而已',quality:1,size:'迷你',maxStack:100,sellPrice:5,special:false,usable:false},
+  herbPill:{name:'一品灵草丹',desc:'用灵草炼制的基础丹药，服用后增强体质',quality:1,size:'迷你',maxStack:100,sellPrice:20,special:false,usable:true,usableDesc:'服用后+1血量上限，+0.1攻，+0.1防'}
+};
+var RECIPES={
+  herbPill:{resultId:'herbPill',materials:[{id:'herb',count:5}],successRate:1,maxCraft:10,maxUse:10,effects:{hpMax:1,atk:0.1,def:0.1}}
 };
 var MONSTERS={mosquito:{name:'小雄蚊',hp:20,atk:5,def:0,expReward:5,loot:[
   {id:'faintSpirit',chance:0.1},
@@ -155,10 +173,13 @@ var monsterKills={};Object.keys(MONSTERS).forEach(function(k){monsterKills[k]=0;
 var containerOwned=false;
 var lastCombatLines=null,combatRepeat=0;
 var defeatedInTravel=false;
+/* 制作状态 */
+var craftStats={};Object.keys(RECIPES).forEach(function(k){craftStats[k]={crafted:0,used:0};});
+var bonusHP=0,bonusATK=0,bonusDEF=0;
 function getPctBonus(){return stageIdx;}
-function getEffectiveHP(){return Math.floor(ATTRS[0].hp*(1+getPctBonus()/100))+(containerOwned?monsterKills.mosquito:0);}
-function getEffectiveATK(){return Math.floor(ATTRS[0].atk*(1+getPctBonus()/100));}
-function getEffectiveDEF(){return Math.floor(ATTRS[0].def*(1+getPctBonus()/100));}
+function getEffectiveHP(){return Math.floor((ATTRS[0].hp+bonusHP)*(1+getPctBonus()/100))+(containerOwned?monsterKills.mosquito:0);}
+function getEffectiveATK(){return parseFloat(((ATTRS[0].atk+bonusATK)*(1+getPctBonus()/100)).toFixed(1));}
+function getEffectiveDEF(){return parseFloat(((ATTRS[0].def+bonusDEF)*(1+getPctBonus()/100)).toFixed(1));}
 function refreshMaxHP(){
   var newMax=getEffectiveHP();
   if(newMax>playerMaxHP)playerHP+=newMax-playerMaxHP;
@@ -206,6 +227,7 @@ var $btnCult=document.getElementById('btnCultivate'),$btnBreak=document.getEleme
 var $speedInfo=document.getElementById('speedInfo');
 var $travelLower=document.getElementById('travelLower'),$destList=document.getElementById('destList');
 var $storageWrap=document.getElementById('storageWrap'),$shopWrap=document.getElementById('shopWrap');
+var $craftWrap=document.getElementById('craftWrap');
 var $modalOverlay=document.getElementById('modalOverlay'),$modalBox=document.getElementById('modalBox');
 var $attrArea=document.getElementById('attrArea');
 function renderMain(){
@@ -266,6 +288,7 @@ $tabs.forEach(function(t){t.addEventListener('click',function(){
   var pg=t.getAttribute('data-page');
   if(pg==='pageStorage')renderStorage();
   if(pg==='pageShop')renderShop();
+  if(pg==='pageCraft')renderCraft();
 });});
 function findSlot(arr,id){for(var i=0;i<arr.length;i++){if(arr[i].id===id)return i;}return-1;}
 function addItem(arr,id,maxSlots){
@@ -276,6 +299,11 @@ function addItem(arr,id,maxSlots){
 function removeOne(arr,id){
   var idx=findSlot(arr,id);if(idx<0)return false;
   arr[idx].count-=1;if(arr[idx].count<=0)arr.splice(idx,1);return true;
+}
+function removeItems(arr,id,count){
+  var idx=findSlot(arr,id);if(idx<0)return false;
+  if(arr[idx].count<count)return false;
+  arr[idx].count-=count;if(arr[idx].count<=0)arr.splice(idx,1);return true;
 }
 function moveItem(from,to,fromIdx,maxTo){
   if(fromIdx>=from.length)return false;var item=from[fromIdx];
@@ -339,6 +367,12 @@ function useItem(arr,idx){
   if(entry.id==='faintSpirit'){
     var bonus=Math.min(100,Math.floor(exp*0.05));setExp(exp+bonus);removeOne(arr,'faintSpirit');
   }
+  if(entry.id==='herbPill'){
+    var recipe=RECIPES.herbPill;
+    if(craftStats.herbPill.used>=recipe.maxUse){return;}
+    bonusHP+=recipe.effects.hpMax;bonusATK+=recipe.effects.atk;bonusDEF+=recipe.effects.def;
+    craftStats.herbPill.used++;refreshMaxHP();removeOne(arr,'herbPill');
+  }
 }
 function renderShop(){
   var traveling=playerState==='traveling';
@@ -366,6 +400,83 @@ function renderShop(){
         btn1:'出售',on1:function(){setCopper(copper+it.sellPrice);removeOne(arr,it.id);renderShop();}});
     });
   });
+}
+/* ===== 制作 ===== */
+var craftCategory='alchemy';
+function renderCraft(){
+  var html='<div class="craft-tabs">';
+  html+='<button class="craft-tab'+(craftCategory==='alchemy'?' active':'')+'" data-cat="alchemy">炼丹</button>';
+  html+='<button class="craft-tab" data-cat="accessory">饰品</button>';
+  html+='<button class="craft-tab" data-cat="manual">秘籍</button>';
+  html+='<button class="craft-tab" data-cat="other">其它</button>';
+  html+='</div>';
+  if(craftCategory==='alchemy'){
+    html+='<div class="section-title">炼丹配方</div>';
+    html+=buildRecipeRow('herbPill');
+  }else{
+    html+='<div class="craft-empty">暂无配方</div>';
+  }
+  $craftWrap.innerHTML=html;
+  $craftWrap.querySelectorAll('.craft-tab').forEach(function(tab){
+    tab.addEventListener('click',function(){
+      craftCategory=tab.getAttribute('data-cat');
+      renderCraft();
+    });
+  });
+  var craftBtn=$craftWrap.querySelector('.recipe-btn[data-recipe]');
+  if(craftBtn){
+    craftBtn.addEventListener('click',function(){
+      doCraft(craftBtn.getAttribute('data-recipe'));
+    });
+  }
+}
+function buildRecipeRow(recipeKey){
+  var recipe=RECIPES[recipeKey];var result=ITEMS[recipe.resultId];
+  var stats=craftStats[recipeKey];
+  var canCraft=stats.crafted<recipe.maxCraft;
+  /* 检查材料 */
+  for(var i=0;i<recipe.materials.length;i++){
+    var mat=recipe.materials[i];
+    var idx=findSlot(backpack,mat.id);
+    if(idx<0||backpack[idx].count<mat.count){canCraft=false;break;}
+  }
+  var matText='';
+  for(var i=0;i<recipe.materials.length;i++){
+    var mat=recipe.materials[i];var have=0;
+    var idx=findSlot(backpack,mat.id);
+    if(idx>=0)have=backpack[idx].count;
+    matText+=ITEMS[mat.id].name+' x'+mat.count+' ('+have+'/'+mat.count+')';
+    if(i<recipe.materials.length-1)matText+='，';
+  }
+  var h='<div class="recipe-row">';
+  h+='<div class="recipe-slot">'+result.name+'</div>';
+  h+='<div class="recipe-info">';
+  h+='<div>'+result.name+' <span class="count">成功率'+Math.round(recipe.successRate*100)+'%　已合成'+stats.crafted+'/'+recipe.maxCraft+'　已服用'+stats.used+'/'+recipe.maxUse+'</span></div>';
+  h+='<div class="mat">材料：'+matText+'</div>';
+  h+='<div class="mat">效果：+'+recipe.effects.hpMax+'血量上限，+'+recipe.effects.atk+'攻，+'+recipe.effects.def+'防</div>';
+  h+='</div>';
+  h+='<button class="recipe-btn" data-recipe="'+recipeKey+'"'+(canCraft?'':' disabled')+'>合成</button>';
+  h+='</div>';
+  return h;
+}
+function doCraft(recipeKey){
+  var recipe=RECIPES[recipeKey];var stats=craftStats[recipeKey];
+  if(stats.crafted>=recipe.maxCraft)return;
+  /* 检查并消耗材料 */
+  for(var i=0;i<recipe.materials.length;i++){
+    var mat=recipe.materials[i];
+    var idx=findSlot(backpack,mat.id);
+    if(idx<0||backpack[idx].count<mat.count)return;
+  }
+  for(var i=0;i<recipe.materials.length;i++){
+    removeItems(backpack,recipe.materials[i].id,recipe.materials[i].count);
+  }
+  /* 成功率判定 */
+  if(Math.random()<recipe.successRate){
+    stats.crafted++;
+    addItem(warehouse,recipe.resultId,WAREHOUSE_SLOTS);
+  }
+  renderCraft();
 }
 /* ===== travel ===== */
 var DESTS={grassland:{name:'草地',progressStep:5,maxDist:10,explorePerAdvance:3,expMin:1,expMax:10,copperChance:0.2,monsterChance:0.2}};
@@ -462,10 +573,8 @@ function doAdvance(){
   if(travelDist>=d.maxDist)travelExplores=-1;
   var roll=Math.random();
   if(roll<d.monsterChance){startCombat('mosquito');return;}
-  /* 修为增长 */
   var gained=Math.floor(Math.random()*(d.expMax-d.expMin+1))+d.expMin;
   setExp(exp+gained);
-  /* 额外铜钱 */
   if(Math.random()<d.copperChance){setCopper(copper+1);setTravelMsg(['修为+'+gained,'地上有枚沾灰的铜钱，捡起来吧']);return;}
   setTravelMsg(['修为+'+gained]);
 }
@@ -481,9 +590,7 @@ function doExplore(){
   clearTravelMsg();lastCombatLines=null;combatRepeat=0;
   travelProg=Math.min(100,travelProg+d.progressStep);
   var roll=Math.random();
-  /* 怪物 20% */
   if(roll<0.2){startCombat('mosquito');return;}
-  /* 素材 20% */
   if(roll<0.4){
     var msgs=['发现了一株灵草'];
     if(addItem(backpack,'herb',BACKPACK_SLOTS)){msgs.push('已收入背包');}
@@ -491,12 +598,10 @@ function doExplore(){
     if(Math.random()<d.copperChance){setCopper(copper+1);msgs.push('地上有枚沾灰的铜钱，捡起来吧');}
     setTravelMsg(msgs);return;
   }
-  /* 灵气残影 5%（仅10km后） */
   if(far&&roll<0.45){showEncounter();return;}
-  /* 修为增长 */
   var gained;
-  if(far){gained=Math.floor(Math.random()*6)+5;}/* 5-10 */
-  else{gained=Math.floor(Math.random()*(d.expMax-d.expMin+1))+d.expMin;}/* 1-10 */
+  if(far){gained=Math.floor(Math.random()*6)+5;}
+  else{gained=Math.floor(Math.random()*(d.expMax-d.expMin+1))+d.expMin;}
   setExp(exp+gained);
   var msgs=['修为+'+gained];
   if(Math.random()<d.copperChance){setCopper(copper+1);msgs.push('地上有枚沾灰的铜钱，捡起来吧');}
@@ -583,7 +688,7 @@ function doReturn(){
   clearTravelMsg();renderTravelLower();renderMain();
   if(wasDefeated)setTimeout(function(){startCultivate();},100);
 }
-renderMain();renderTravelLower();renderStorage();renderShop();
+renderMain();renderTravelLower();renderStorage();renderShop();renderCraft();
 </script>
 </body>
 </html>
