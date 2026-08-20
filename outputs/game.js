@@ -69,9 +69,9 @@ function renderStorage(){
 var eqSlots=getEquipSlots();
 var html='<div class="section-title">\u88c5\u5907\u680f</div><div style="display:flex;gap:12px;justify-content:center;margin-bottom:12px">';
 html+='<div class="grid" style="grid-template-columns:repeat(1,1fr);width:48px">';
-for(var i=0;i<3;i++){if(i<eqSlots&&equipment[i]){var it=ITEMS[equipment[i]];html+='<div class="slot has-item" data-eidx="'+i+'" style="background:#e8e0d0">'+it.name.substring(0,2)+'</div>';}else if(i<eqSlots){html+='<div class="slot" data-eidx="'+i+'" style="border-style:dashed"></div>';}else{html+='<div class="slot" style="background:#eee;color:#ccc">\u{1F512}</div>';}}
+for(var i=0;i<3;i++){if(i<eqSlots&&equipment[i]){var it=ITEMS[equipment[i]];html+='<div class="slot has-item" data-eidx="'+i+'" style="background:#e8e0d0">'+it.name.substring(0,2)+'</div>';}else if(i<eqSlots){html+='<div class="slot" data-eidx="'+i+'" style="border-style:dashed"></div>';}else{html+='<div class="slot" style="background:#eee;color:#ccc">🔒</div>';}}
 html+='</div><div class="grid" style="grid-template-columns:repeat(1,1fr);width:48px">';
-for(var i=3;i<6;i++){if(i<eqSlots&&equipment[i]){var it=ITEMS[equipment[i]];html+='<div class="slot has-item" data-eidx="'+i+'" style="background:#e8e0d0">'+it.name.substring(0,2)+'</div>';}else if(i<eqSlots){html+='<div class="slot" data-eidx="'+i+'" style="border-style:dashed"></div>';}else{html+='<div class="slot" style="background:#eee;color:#ccc">\u{1F512}</div>';}}
+for(var i=3;i<6;i++){if(i<eqSlots&&equipment[i]){var it=ITEMS[equipment[i]];html+='<div class="slot has-item" data-eidx="'+i+'" style="background:#e8e0d0">'+it.name.substring(0,2)+'</div>';}else if(i<eqSlots){html+='<div class="slot" data-eidx="'+i+'" style="border-style:dashed"></div>';}else{html+='<div class="slot" style="background:#eee;color:#ccc">🔒</div>';}}
 html+='</div></div>';
 html+='<div class="section-title">\u4ed3\u5e93</div><div class="grid">';
 for(var i=0;i<WAREHOUSE_SLOTS;i++){if(i<warehouse.length){var it=ITEMS[warehouse[i].id];html+='<div class="slot has-item" data-idx="'+i+'" data-loc="warehouse">'+it.name+'<span class="count">x'+warehouse[i].count+'</span></div>';}else html+='<div class="slot"></div>';}
