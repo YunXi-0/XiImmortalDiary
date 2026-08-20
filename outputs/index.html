@@ -163,7 +163,7 @@ function loadGame(){
     stageIdx=d.stageIdx||0;exp=d.exp||0;copper=d.copper||0;
     playerHP=d.playerHP||50;playerMaxHP=d.playerMaxHP||50;
     backpack=d.backpack||[];warehouse=d.warehouse||[];
-    monsterKills=d.monsterKills||{};Object.keys(MONSTERS).forEach(function(k){if(!(k in monsterKills))monsterKills[k]=0;});
+    monsterKills=d.monsterKills||{mosquito:0,mosquitoFemale:0};Object.keys(MONSTERS).forEach(function(k){if(!(k in monsterKills))monsterKills[k]=0;});
     containerOwned=d.containerOwned||false;
     containerFemaleOwned=d.containerFemaleOwned||false;
     craftStats=d.craftStats||{};Object.keys(RECIPES).forEach(function(k){if(!craftStats[k])craftStats[k]={crafted:0,used:0};});
@@ -287,7 +287,7 @@ function renderAttrArea(){
   html+='<div class="attr-row"><span class="attr-label">攻击</span><span class="attr-val">'+getEffectiveATK()+' (+'+pct+'%)</span></div>';
   html+='<div class="attr-row"><span class="attr-label">防御</span><span class="attr-val">'+getEffectiveDEF()+' (+'+pct+'%)</span></div>';
   html+='<div class="attr-row"><span class="attr-label">自然恢复</span><span class="attr-val">'+ATTRS[0].rec+'</span></div>';
-  if(ls>0)html+='<div class="attr-row"><span class="attr-label">吸血</span><span class="attr-val">'+(ls*100).toFixed(2)+'%</span></div>';
+  html+='<div class="attr-row"><span class="attr-label">吸血</span><span class="attr-val">'+(ls*100).toFixed(2)+'%</span></div>';
   $attrArea.innerHTML=html;
 }
 function startCultivate(){
@@ -391,8 +391,10 @@ function renderStorage(){
         if(it.usable){opts.btn3=it.id==='herbPill'?'服用':'吸收';opts.on3=function(){useItem(backpack,idx);renderStorage();};}
         showModal(opts);
       }else{
-        showModal({name:it.name,desc:it.desc,quality:it.quality,size:it.size,maxStack:it.maxStack,price:it.sellPrice,
-          btn1:'取出',on1:function(){moveItem(warehouse,backpack,idx,BACKPACK_SLOTS);renderStorage();saveGame();}});
+        var opts={name:it.name,desc:it.desc,quality:it.quality,size:it.size,maxStack:it.maxStack,price:it.sellPrice,
+          btn1:'取出',on1:function(){moveItem(warehouse,backpack,idx,BACKPACK_SLOTS);renderStorage();saveGame();}};
+        if(it.usable){opts.btn2=it.id==='herbPill'?'服用':'吸收';opts.on2=function(){useItem(warehouse,idx);renderStorage();};}
+        showModal(opts);
       }
     });
   });
@@ -649,7 +651,7 @@ function showEncounter(){
   });
 }
 function startCombat(monsterKey){
-  var m=MONSTERS[monsterKey];m.key=monsterKey;
+  var m=MONSTERS[monsterKey];m={name:m.name,hp:m.hp,atk:m.atk,def:m.def,expReward:m.expReward,lifesteal:m.lifesteal||false,loot:m.loot,key:monsterKey};
   inCombat=true;enemyData=m;enemyHP=m.hp;
   lastCombatLines=null;combatRepeat=0;
   renderTravelLower();setTravelMsg([m.name+'出现了！',m.name+'：嗡~嗡~~']);
@@ -718,6 +720,13 @@ function doReturn(){
 /* ===== 初始化 ===== */
 loadGame();
 refreshMaxHP();
+document.getElementById('infoTabs').querySelectorAll('.craft-tab').forEach(function(tab){
+  tab.addEventListener('click',function(){
+    infoTab=tab.getAttribute('data-tab');
+    document.getElementById('infoTabs').querySelectorAll('.craft-tab').forEach(function(t){t.classList.remove('active');});
+    tab.classList.add('active');renderInfo();
+  });
+});
 renderMain();renderTravelLower();renderStorage();renderShop();renderCraft();
 </script>
 </body>
