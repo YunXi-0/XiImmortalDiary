@@ -177,8 +177,8 @@ var ITEMS={
   faintSpirit:{name:'微弱灵气残影',desc:'弱小灵体在某处活动过的证据',quality:1,size:'迷你',maxStack:100,sellPrice:10,special:false,usable:true,usableDesc:'吸收后增加5%当前修为(上限100)'},
   mosquitoContainer:{name:'小雄蚊灵体容器',desc:'一个玻璃珠大小的金属球体，表面有着浅浅的纹路，散发着淡绿色的光，凑近听还有"嗡嗡"的声音。拥有后再击杀小雄蚊时，血量上限+1。(上限100)',quality:3,size:'中',maxStack:10,sellPrice:0,special:true},
   mosquitoFemaleContainer:{name:'小雌蚊灵体容器',desc:'一个玻璃珠大小的金属球体，表面有着浅浅的纹路，散发着淡粉色的光，凑近听还有"嗡~嗡~"的声音。拥有后再击杀小雌蚊时，吸血属性+0.01%。(上限1%)',quality:3,size:'中',maxStack:10,sellPrice:0,special:true},
-  herb:{name:'灵草',desc:'稍微有些灵气沾染的草而已',quality:1,size:'迷你',maxStack:100,sellPrice:5,special:false,usable:false},
-  herbPill:{name:'一品灵草丹',desc:'用灵草炼制的基础丹药，服用后增强体质',quality:1,size:'迷你',maxStack:100,sellPrice:20,special:false,usable:true,usableDesc:'服用后+1血量上限，+0.1攻，+0.1防'}
+  herb:{name:'灵草',desc:'稍微有些灵气沾染的草而已',quality:1,size:'迷你',maxStack:100,sellPrice:2,special:false,usable:false},
+  herbPill:{name:'一品灵草丹',desc:'用灵草炼制的基础丹药，服用后增强体质',quality:1,size:'迷你',maxStack:100,sellPrice:null,special:false,usable:true,usableDesc:'服用后+1血量上限，+0.1攻，+0.1防'}
 };
 var RECIPES={
   herbPill:{resultId:'herbPill',materials:[{id:'herb',count:5}],successRate:1,maxCraft:10,maxUse:10,effects:{hpMax:1,atk:0.1,def:0.1}}
@@ -210,8 +210,8 @@ var bonusHP=0,bonusATK=0,bonusDEF=0;
 function getPctBonus(){return stageIdx;}
 function getContainerHPBonus(){return containerOwned?Math.min(monsterKills.mosquito,100):0;}
 function getEffectiveHP(){return Math.floor((ATTRS[0].hp+bonusHP)*(1+getPctBonus()/100))+getContainerHPBonus();}
-function getEffectiveATK(){return parseFloat(((ATTRS[0].atk+bonusATK)*(1+getPctBonus()/100)).toFixed(1));}
-function getEffectiveDEF(){return parseFloat(((ATTRS[0].def+bonusDEF)*(1+getPctBonus()/100)).toFixed(1));}
+function getEffectiveATK(){return ((ATTRS[0].atk+bonusATK)*(1+getPctBonus()/100)).toFixed(2);}
+function getEffectiveDEF(){return ((ATTRS[0].def+bonusDEF)*(1+getPctBonus()/100)).toFixed(2);}
 function getLifestealPct(){return containerFemaleOwned?Math.min(monsterKills.mosquitoFemale*0.0001,0.01):0;}
 function refreshMaxHP(){
   var newMax=getEffectiveHP();
@@ -252,7 +252,7 @@ setInterval(function(){
 },100);
 function setExp(v){var o=exp;exp=v;if(o!==v){notifyChange('exp','修为',o,v);renderMain();saveGame();}}
 function setCopper(v){var o=copper;copper=v;if(o!==v){notifyChange('copper','铜钱',o,v);renderMain();saveGame();}}
-function fmtHP(v){return Math.round(v*10)/10;}
+function fmtHP(v){return (Math.round(v*10)/10).toFixed(1);}
 var $stageNum=document.getElementById('stageNum'),$topExp=document.getElementById('topExp');
 var $realmName=document.getElementById('realmName'),$pctText=document.getElementById('pctText');
 var $expText=document.getElementById('expText'),$progressBar=document.getElementById('progressBar');
@@ -351,7 +351,7 @@ function showModal(opts){
   var html='<div class="modal-name">'+opts.name+'</div>';
   html+='<div class="modal-desc">'+opts.desc+'</div>';
   html+='<div class="modal-meta">品质：'+opts.quality+'　大小：'+opts.size+'　可堆叠：'+opts.maxStack+'</div>';
-  if(!opts.special&&opts.price!==undefined)html+='<div class="modal-meta">出售价格：'+opts.price+' 铜钱</div>';
+  if(!opts.special&&opts.price!==undefined&&opts.price!==null)html+='<div class="modal-meta">出售价格：'+opts.price+' 铜钱</div>';
   html+='<div class="modal-btns">';
   if(opts.btn1)html+='<button class="btn btn-sm" id="mb1">'+opts.btn1+'</button>';
   if(opts.btn2)html+='<button class="btn btn-sm" id="mb2">'+opts.btn2+'</button>';
@@ -386,9 +386,9 @@ function renderStorage(){
       if(it.special){showModal({name:it.name,desc:it.desc,quality:it.quality,size:it.size,maxStack:it.maxStack,special:true});return;}
       if(loc==='backpack'){
         var opts={name:it.name,desc:it.desc,quality:it.quality,size:it.size,maxStack:it.maxStack,price:it.sellPrice,
-          btn1:'存放',on1:function(){moveItem(backpack,warehouse,idx,WAREHOUSE_SLOTS);renderStorage();saveGame();},
+          btn1:'存储',on1:function(){moveItem(backpack,warehouse,idx,WAREHOUSE_SLOTS);renderStorage();saveGame();},
           btn2:'丢弃',on2:function(){backpack.splice(idx,1);renderStorage();saveGame();}};
-        if(it.usable){opts.btn3='使用';opts.on3=function(){useItem(backpack,idx);renderStorage();};}
+        if(it.usable){opts.btn3=it.id==='herbPill'?'服用':'吸收';opts.on3=function(){useItem(backpack,idx);renderStorage();};}
         showModal(opts);
       }else{
         showModal({name:it.name,desc:it.desc,quality:it.quality,size:it.size,maxStack:it.maxStack,price:it.sellPrice,
@@ -431,6 +431,7 @@ function renderShop(){
       var arr=loc==='backpack'?backpack:warehouse;if(idx>=arr.length)return;
       var it=ITEMS[arr[idx].id];
       if(it.special){showModal({name:it.name,desc:it.desc,quality:it.quality,size:it.size,maxStack:it.maxStack,special:true});return;}
+      if(it.sellPrice===null){showModal({name:it.name,desc:it.desc,quality:it.quality,size:it.size,maxStack:it.maxStack,price:null});return;}
       showModal({name:it.name,desc:it.desc,quality:it.quality,size:it.size,maxStack:it.maxStack,price:it.sellPrice,
         btn1:'出售',on1:function(){setCopper(copper+it.sellPrice);removeOne(arr,it.id);renderShop();}});
     });
