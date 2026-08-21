@@ -1,0 +1,17 @@
+apply plugin: "com.android.application"
+
+android {
+    compileSdkVersion 33
+    defaultConfig {
+        applicationId "com.xiimmortal.game"
+        minSdkVersion 21
+        targetSdkVersion 33
+        versionCode 1
+        versionName "0.1"
+    }
+    buildTypes {
+        release {
+            minifyEnabled false
+        }
+    }
+}
