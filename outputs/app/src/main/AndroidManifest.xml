@@ -2,7 +2,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.xiimmortal.game">
     <application
-        android:label="修仙"
+        android:label="曦仙记"
         android:theme="@android:style/Theme.NoTitleBar"
         android:usesCleartextTraffic="true">
         <activity
