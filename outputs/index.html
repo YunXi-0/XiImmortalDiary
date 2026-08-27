@@ -111,10 +111,9 @@ html,body{width:100%;height:100%;overflow:hidden;font-family:"PingFang SC","Micr
 <script>
 (function(){
   var localSrc='game.js';
-  var remoteUrl='https://cdn.jsdelivr.net/gh/YunXi-0/XiImmortalDiary@main/outputs/game.js';
   var cacheKey='game_js_cache';
-  var versionKey='game_js_version';
-  var remoteVersionUrl='https://cdn.jsdelivr.net/gh/YunXi-0/XiImmortalDiary@main/outputs/game.js?_t='+Date.now();
+  var APP_VERSION='0.2.2';
+  var REMOTE_BASE='https://cdn.jsdelivr.net/gh/YunXi-0/XiImmortalDiary@main/outputs/';
 
   function loadScript(src,onError){
     var s=document.createElement('script');
@@ -123,57 +122,81 @@ html,body{width:100%;height:100%;overflow:hidden;font-family:"PingFang SC","Micr
     document.body.appendChild(s);
   }
 
-  function tryUpdateAndLoad(){
-    // 先尝试从远程获取最新版本
+  function showRestartTip(){
+    var overlay=document.createElement('div');
+    overlay.style.cssText='position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:10000;display:flex;align-items:center;justify-content:center';
+    overlay.innerHTML='<div style="background:#fff;border-radius:12px;padding:24px;max-width:300px;text-align:center;box-shadow:0 4px 20px rgba(0,0,0,0.3)"><div style="font-size:16px;font-weight:600;color:#444;margin-bottom:12px">游戏已更新</div><div style="font-size:13px;color:#888;margin-bottom:20px">新内容已加载，请重启游戏以应用更新</div><button id="restartBtn" style="width:100%;padding:10px;border:none;border-radius:6px;background:#4CAF50;color:#fff;font-size:15px;font-weight:600;cursor:pointer">确定</button></div>';
+    document.body.appendChild(overlay);
+    document.getElementById('restartBtn').addEventListener('click',function(){overlay.remove();location.reload();});
+  }
+
+  function showAPKUpdateTip(remoteVersion,apkUrl){
+    var overlay=document.createElement('div');
+    overlay.style.cssText='position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:10000;display:flex;align-items:center;justify-content:center';
+    overlay.innerHTML='<div style="background:#fff;border-radius:12px;padding:24px;max-width:300px;text-align:center;box-shadow:0 4px 20px rgba(0,0,0,0.3)"><div style="font-size:16px;font-weight:600;color:#444;margin-bottom:12px">发现新版本</div><div style="font-size:13px;color:#888;margin-bottom:8px">当前版本：v'+APP_VERSION+'</div><div style="font-size:13px;color:#888;margin-bottom:20px">最新版本：v'+remoteVersion+'</div><div style="display:flex;gap:10px"><button id="cancelUpdate" style="flex:1;padding:10px;border:1px solid #ddd;border-radius:6px;background:#fff;color:#888;font-size:14px;cursor:pointer">取消</button><button id="doUpdate" style="flex:1;padding:10px;border:none;border-radius:6px;background:#4CAF50;color:#fff;font-size:14px;font-weight:600;cursor:pointer">更新</button></div></div>';
+    document.body.appendChild(overlay);
+    document.getElementById('cancelUpdate').addEventListener('click',function(){overlay.remove();});
+    document.getElementById('doUpdate').addEventListener('click',function(){overlay.remove();window.open(apkUrl,'_blank');});
+  }
+
+  // Check remote version file
+  function checkRemoteVersion(){
     var xhr=new XMLHttpRequest();
-    xhr.open('GET',remoteVersionUrl,true);
+    xhr.open('GET',REMOTE_BASE+'version.txt?_t='+Date.now(),true);
+    xhr.timeout=3000;
+    xhr.onreadystatechange=function(){
+      if(xhr.readyState===4&&xhr.status===200){
+        var remoteVersion=xhr.responseText.trim();
+        if(remoteVersion&&remoteVersion!==APP_VERSION){
+          // Version mismatch, need APK update
+          var apkUrl='https://github.com/YunXi-0/XiImmortalDiary/releases/latest';
+          showAPKUpdateTip(remoteVersion,apkUrl);
+        }
+      }
+    };
+    xhr.onerror=function(){};
+    xhr.send();
+  }
+
+  function tryUpdateAndLoad(){
+    var remoteUrl=REMOTE_BASE+'game.js?_t='+Date.now();
+    var xhr=new XMLHttpRequest();
+    xhr.open('GET',remoteUrl,true);
     xhr.timeout=5000;
     xhr.onreadystatechange=function(){
       if(xhr.readyState===4){
         if(xhr.status===200&&xhr.responseText.length>1000){
-          // 远程获取成功，缓存到localStorage
-          try{localStorage.setItem(cacheKey,xhr.responseText);}catch(e){}
-          // 加载远程脚本
-          var blob=new Blob([xhr.responseText],{type:'application/javascript'});
-          var url=URL.createObjectURL(blob);
-          loadScript(url,function(){
-            // blob加载失败，回退到本地
-            loadScript(localSrc,function(){});
-          });
-        }else{
-          // 远程失败，尝试用缓存
           var cached=null;
           try{cached=localStorage.getItem(cacheKey);}catch(e){}
-          if(cached&&cached.length>1000){
-            var blob=new Blob([cached],{type:'application/javascript'});
-            var url=URL.createObjectURL(blob);
-            loadScript(url,function(){
-              loadScript(localSrc,function(){});
-            });
-          }else{
-            loadScript(localSrc,function(){});
-          }
+          var isNew=!cached||cached!==xhr.responseText;
+          try{localStorage.setItem(cacheKey,xhr.responseText);}catch(e){}
+          var blob=new Blob([xhr.responseText],{type:'application/javascript'});
+          var url=URL.createObjectURL(blob);
+          loadScript(url,function(){loadScript(localSrc,function(){});});
+          if(isNew)setTimeout(showRestartTip,2000);
+        }else{
+          loadFromCacheOrLocal();
         }
       }
     };
-    xhr.onerror=function(){
-      // 网络错误，用缓存或本地
-      var cached=null;
-      try{cached=localStorage.getItem(cacheKey);}catch(e){}
-      if(cached&&cached.length>1000){
-        var blob=new Blob([cached],{type:'application/javascript'});
-        var url=URL.createObjectURL(blob);
-        loadScript(url,function(){
-          loadScript(localSrc,function(){});
-        });
-      }else{
-        loadScript(localSrc,function(){});
-      }
-    };
+    xhr.onerror=function(){loadFromCacheOrLocal();};
     xhr.send();
   }
 
+  function loadFromCacheOrLocal(){
+    var cached=null;
+    try{cached=localStorage.getItem(cacheKey);}catch(e){}
+    if(cached&&cached.length>1000){
+      var blob=new Blob([cached],{type:'application/javascript'});
+      var url=URL.createObjectURL(blob);
+      loadScript(url,function(){loadScript(localSrc,function(){});});
+    }else{
+      loadScript(localSrc,function(){});
+    }
+  }
+
   tryUpdateAndLoad();
+  setTimeout(checkRemoteVersion,3000);
 })();
 </script>
 </body>
