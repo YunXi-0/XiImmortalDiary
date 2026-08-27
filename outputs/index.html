@@ -113,13 +113,24 @@ html,body{width:100%;height:100%;overflow:hidden;font-family:"PingFang SC","Micr
   var localSrc='game.js';
   var cacheKey='game_js_cache';
   var APP_VERSION='0.2.2';
-  var REMOTE_BASE='https://cdn.jsdelivr.net/gh/YunXi-0/XiImmortalDiary@main/outputs/';
+  var REMOTE_BASES=['https://jsd.cdn.zzko.cn/gh/YunXi-0/XiImmortalDiary@main/outputs/','https://cdn.jsdelivr.net/gh/YunXi-0/XiImmortalDiary@main/outputs/'];
 
   function loadScript(src,onError){
     var s=document.createElement('script');
     s.src=src;
     s.onerror=onError;
     document.body.appendChild(s);
+  }
+
+  function tryFetchFromBases(path,cb,idx){
+    if(!idx)idx=0;
+    if(idx>=REMOTE_BASES.length){cb(null);return;}
+    var xhr=new XMLHttpRequest();
+    xhr.open('GET',REMOTE_BASES[idx]+path+'?_t='+Date.now(),true);
+    xhr.timeout=4000;
+    xhr.onreadystatechange=function(){if(xhr.readyState===4){if(xhr.status===200&&xhr.responseText.length>0)cb(xhr.responseText);else tryFetchFromBases(path,cb,idx+1);}};
+    xhr.onerror=function(){tryFetchFromBases(path,cb,idx+1);};
+    xhr.send();
   }
 
   function showRestartTip(){
@@ -139,48 +150,32 @@ html,body{width:100%;height:100%;overflow:hidden;font-family:"PingFang SC","Micr
     document.getElementById('doUpdate').addEventListener('click',function(){overlay.remove();window.open(apkUrl,'_blank');});
   }
 
-  // Check remote version file
   function checkRemoteVersion(){
-    var xhr=new XMLHttpRequest();
-    xhr.open('GET',REMOTE_BASE+'version.txt?_t='+Date.now(),true);
-    xhr.timeout=3000;
-    xhr.onreadystatechange=function(){
-      if(xhr.readyState===4&&xhr.status===200){
-        var remoteVersion=xhr.responseText.trim();
+    tryFetchFromBases('version.txt',function(text){
+      if(text){
+        var remoteVersion=text.trim();
         if(remoteVersion&&remoteVersion!==APP_VERSION){
-          // Version mismatch, need APK update
-          var apkUrl='https://github.com/YunXi-0/XiImmortalDiary/releases/latest';
+          var apkUrl='https://github.com/YunXi-0/XiImmortalDiary/releases/latest/download/app-release-unsigned.apk';
           showAPKUpdateTip(remoteVersion,apkUrl);
         }
       }
-    };
-    xhr.onerror=function(){};
-    xhr.send();
+    });
   }
 
   function tryUpdateAndLoad(){
-    var remoteUrl=REMOTE_BASE+'game.js?_t='+Date.now();
-    var xhr=new XMLHttpRequest();
-    xhr.open('GET',remoteUrl,true);
-    xhr.timeout=5000;
-    xhr.onreadystatechange=function(){
-      if(xhr.readyState===4){
-        if(xhr.status===200&&xhr.responseText.length>1000){
-          var cached=null;
-          try{cached=localStorage.getItem(cacheKey);}catch(e){}
-          var isNew=!cached||cached!==xhr.responseText;
-          try{localStorage.setItem(cacheKey,xhr.responseText);}catch(e){}
-          var blob=new Blob([xhr.responseText],{type:'application/javascript'});
-          var url=URL.createObjectURL(blob);
-          loadScript(url,function(){loadScript(localSrc,function(){});});
-          if(isNew)setTimeout(showRestartTip,2000);
-        }else{
-          loadFromCacheOrLocal();
-        }
+    tryFetchFromBases('game.js',function(text){
+      if(text&&text.length>1000){
+        var cached=null;try{cached=localStorage.getItem(cacheKey);}catch(e){}
+        var isNew=!cached||cached!==text;
+        try{localStorage.setItem(cacheKey,text);}catch(e){}
+        var blob=new Blob([text],{type:'application/javascript'});
+        var url=URL.createObjectURL(blob);
+        loadScript(url,function(){loadScript(localSrc,function(){});});
+        if(isNew)setTimeout(showRestartTip,2000);
+      }else{
+        loadFromCacheOrLocal();
       }
-    };
-    xhr.onerror=function(){loadFromCacheOrLocal();};
-    xhr.send();
+    });
   }
 
   function loadFromCacheOrLocal(){
@@ -201,3 +196,6 @@ html,body{width:100%;height:100%;overflow:hidden;font-family:"PingFang SC","Micr
 </script>
 </body>
 </html>
+
+
+
