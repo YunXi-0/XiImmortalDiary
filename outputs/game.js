@@ -1,7 +1,236 @@
 var APP_VERSION='0.2.3';
 var SAVE_KEY='xiImmortalSave',SAVE_VER=4;
-function saveGame(){var d={v:SAVE_VER,sI:stageIdx,exp:exp,cop:copper,pHP:playerHP,pMHP:playerMaxHP,bp:backpack,wh:warehouse,mk:monsterKills,cO:containerOwned,cFO:containerFemaleOwned,cKB:containerKillBase,cFKB:containerFemaleKillBase,cs:craftStats,bHP:bonusHP,bATK:bonusATK,bDEF:bonusDEF,bLS:bonusLifesteal,bC:bonusCrit,bCD:bonusCritDmg,bDo:bonusDodge,bHi:bonusHit,bDR:bonusDefRat,bAR:bonusAtkRat,bDS:bonusDefSmith,bAZ:bonusAtkZaiA,bAB:bonusAtkBig,bAS:bonusAtkSnake,bHS:bonusHitSpider,bDC:bonusDodgeCentipede,bAB2:bonusAtkBoar,eq:equipment,sh:shopSlots,sr:shopRefreshAt,lt:lastTravelDest,cl:craftLevels,sL:{gc:shopLevel.gridCount,rl:shopLevel.rareLevel},sk:skills,me:mapExp,en:enchanted,vk:variantKills,sr:specialRealm,ss:specialStage,cs2:completedSpecials,spb:specialPctBonus,tge:trueGrassEssenceObtained,st:stance,sP:stanceProficiency,cLv:cultLv,cExp:cultExp,tAL:tempArrayLv,bT:bodyTrain,bTHP:bodyTrainBonusHP,bTATK:bodyTrainBonusATK,bTDEF:bodyTrainBonusDEF,cBHP:cultBonusHP,cBATK:cultBonusATK,cBDEF:cultBonusDEF,uR:unlockedRecipes,cBHP:cultBonusHP,cBATK:cultBonusATK,cBDEF:cultBonusDEF,fac:facilities,evtC:eventChance,uF:unlockedFacilities,tLv:travelLv,tExp:travelExp};try{localStorage.setItem(SAVE_KEY,JSON.stringify(d));}catch(e){}}
-function loadGame(){try{var s=localStorage.getItem(SAVE_KEY);if(!s)return false;var d=JSON.parse(s);if(!d)return false;stageIdx=d.sI||d.stageIdx||0;exp=d.exp||0;copper=d.cop||d.copper||0;playerHP=d.pHP||d.playerHP||50;playerMaxHP=d.pMHP||d.playerMaxHP||50;backpack=d.bp||d.backpack||[];warehouse=d.wh||d.warehouse||[];monsterKills=d.mk||d.monsterKills||{mosquito:0,mosquitoFemale:0};Object.keys(MONSTERS).forEach(function(k){if(!(k in monsterKills))monsterKills[k]=0;});containerOwned=d.cO||d.containerOwned||false;containerFemaleOwned=d.cFO||d.containerFemaleOwned||false;containerKillBase=d.cKB||0;containerFemaleKillBase=d.cFKB||0;craftStats=d.cs||d.craftStats||{herbPill:{crafted:0,used:0},grassKnot:{crafted:0}};Object.keys(RECIPES).forEach(function(k){if(!craftStats[k])craftStats[k]={crafted:0};});bonusHP=d.bHP||d.bonusHP||0;bonusATK=d.bATK||d.bonusATK||0;bonusDEF=d.bDEF||d.bonusDEF||0;bonusLifesteal=d.bLS||d.bonusLifesteal||0;bonusCrit=d.bC||0;bonusCritDmg=d.bCD||0;bonusDodge=d.bDo||0;bonusHit=d.bHi||0;bonusDefRat=d.bDR||0;bonusAtkRat=d.bAR||0;bonusDefSmith=d.bDS||0;bonusAtkZaiA=d.bAZ||0;bonusAtkBig=d.bAB||0;bonusAtkSnake=d.bAS||0;bonusHitSpider=d.bHS||0;bonusDodgeCentipede=d.bDC||0;bonusAtkBoar=d.bAB2||0;equipment=d.eq||d.equipment||[null,null,null,null,null,null];shopSlots=d.sh||d.shopSlots||[null,null,null,null,null,null];shopRefreshAt=d.sr||d.shopRefreshAt||0;lastTravelDest=d.lt||d.lastTravelDest||'grassland';craftLevels=d.cl||d.craftLevels||{alchemy:{lv:1,exp:0},accessory:{lv:1,exp:0},manual:{lv:1,exp:0},cook:{lv:1,exp:0}};if(!craftLevels.cook)craftLevels.cook={lv:1,exp:0};var _sl=d.sL||{};shopLevel={gridCount:_sl.gc||3,rareLevel:_sl.rl||1};skills=d.sk||{insight:0};mapExp=d.me||{};enchanted=d.en||{};variantKills=d.vk||{};if(d.sr)specialRealm=d.sr;if(d.cs2)completedSpecials=d.cs2;if(d.ss)specialStage=d.ss;if(d.spb){if(typeof d.spb==="object"&&!Array.isArray(d.spb))specialPctBonus=d.spb;}if(d.tge)trueGrassEssenceObtained=d.tge;if(d.st)stance=d.st;if(d.sP)stanceProficiency=d.sP;if(typeof d.cLv!=='undefined')cultLv=d.cLv;if(typeof d.cExp!=='undefined')cultExp=d.cExp;if(typeof d.tAL!=='undefined')tempArrayLv=d.tAL;if(d.bT)bodyTrain=d.bT;if(d.bTHP)bodyTrainBonusHP=d.bTHP;if(d.bTATK)bodyTrainBonusATK=d.bTATK;if(d.bTDEF)bodyTrainBonusDEF=d.bTDEF;if(d.cBHP||d.cBHP===0)cultBonusHP=d.cBHP;if(d.cBATK||d.cBATK===0)cultBonusATK=d.cBATK;if(d.cBDEF||d.cBDEF===0)cultBonusDEF=d.cBDEF;if(d.uR)unlockedRecipes=d.uR;if(d.fac)facilities=d.fac;if(d.evtC)eventChance=d.evtC;if(d.uF)unlockedFacilities=d.uF;if(d.tLv)travelLv=d.tLv;if(d.tExp||d.tExp===0)travelExp=d.tExp;
+function saveGame(){var d={v:SAVE_VER,sI:stageIdx,exp:exp,cop:copper,pHP:playerHP,pMHP:playerMaxHP,bp:backpack,wh:warehouse,mk:monsterKills,cO:containerOwned,cFO:containerFemaleOwned,cKB:containerKillBase,cFKB:containerFemaleKillBase,cs:craftStats,bHP:bonusHP,bATK:bonusATK,bDEF:bonusDEF,bLS:bonusLifesteal,bC:bonusCrit,bCD:bonusCritDmg,bDo:bonusDodge,bHi:bonusHit,bDR:bonusDefRat,bAR:bonusAtkRat,bDS:bonusDefSmith,bAZ:bonusAtkZaiA,bAB:bonusAtkBig,bAS:bonusAtkSnake,bHS:bonusHitSpider,bDC:bonusDodgeCentipede,bAB2:bonusAtkBoar,eq:equipment,sh:shopSlots,sr:shopRefreshAt,lt:lastTravelDest,cl:craftLevels,sL:{gc:shopLevel.gridCount,rl:shopLevel.rareLevel},sk:skills,me:mapExp,en:enchanted,vk:variantKills,sr:specialRealm,ss:specialStage,cs2:completedSpecials,spb:specialPctBonus,tge:trueGrassEssenceObtained,st:stance,sP:stanceProficiency,cLv:cultLv,cExp:cultExp,tAL:tempArrayLv,bT:bodyTrain,bTHP:bodyTrainBonusHP,bTATK:bodyTrainBonusATK,bTDEF:bodyTrainBonusDEF,cBHP:cultBonusHP,cBATK:cultBonusATK,cBDEF:cultBonusDEF,uR:unlockedRecipes,fac:facilities,evtC:eventChance,uF:unlockedFacilities,tLv:travelLv,tExp:travelExp};try{localStorage.setItem(SAVE_KEY,JSON.stringify(d));}catch(e){}}
+
+// ========== Account System ==========
+var ACCOUNT_API_BASE='https://xiimmortal-gh-proxy.1061651602.workers.dev/repos/YunXi-0/XiImmortalDiary/contents/data';
+var ACCOUNT_TOKEN='cf_proxy';
+var loggedInAccount=null;
+var autoUploadTimer=null;
+var deviceCode=null;
+
+function initDeviceCode(){
+  if(deviceCode)return;
+  var stored=null;
+  try{stored=localStorage.getItem('deviceCode');}catch(e){}
+  if(stored){deviceCode=stored;return;}
+  deviceCode='DEV-'+Date.now()+'-'+Math.random().toString(36).substring(2,10);
+  try{localStorage.setItem('deviceCode',deviceCode);}catch(e){}
+}
+
+function isValidAccount(a){return /^[a-zA-Z0-9]+$/.test(a)&&a.length>=3&&a.length<=20;}
+function isValidPassword(p){return /^[a-zA-Z0-9!@#$%^&*()_+\-=\[\]{}|;:',.<>?/~`]+$/.test(p)&&p.length>=4&&p.length<=20;}
+
+function ghApi(method,urlPath,body,cb){
+  var proxyUrl=urlPath;
+  var xhr=new XMLHttpRequest();
+  xhr.open(method,proxyUrl,true);
+  xhr.setRequestHeader('Authorization','token '+ACCOUNT_TOKEN);
+  xhr.setRequestHeader('Accept','application/vnd.github.v3+json');
+  if(body)xhr.setRequestHeader('Content-Type','application/json');
+  xhr.onload=function(){cb(null,xhr.responseText,xhr.status);};
+  xhr.onerror=function(){cb('network error');};
+  xhr.send(body||null);
+}
+
+function getAccountFile(account,cb){
+  ghApi('GET',ACCOUNT_API_BASE+'/account_'+account+'.json',null,function(err,data,status){
+    if(status===404){cb(null,null);return;}
+    if(err){cb(err);return;}
+    try{var r=JSON.parse(data);var content=atob(r.content);cb(null,JSON.parse(content),r.sha);}catch(e){cb(e);}
+  });
+}
+
+function saveAccountFile(account,obj,sha,cb){
+  var content=btoa(JSON.stringify(obj));
+  var body=JSON.stringify({message:'update account '+account,content:content});
+  if(sha)body=JSON.stringify({message:'update account '+account,content:content,sha:sha});
+  var url=ACCOUNT_API_BASE+'/account_'+account+'.json';
+  var method=sha?'PUT':'PUT';
+  ghApi(method,url,body,function(err,data,status){
+    if(err){cb(err);return;}
+    try{var r=JSON.parse(data);cb(null,r.content.sha);}catch(e){cb(e);}
+  });
+}
+
+function deleteAccountFile(account,sha,cb){
+  ghApi('DELETE',ACCOUNT_API_BASE+'/account_'+account+'.json',JSON.stringify({message:'delete account '+account,sha:sha}),function(err,data,status){cb(err);});
+}
+
+function getDeviceReg(cb){
+  ghApi('GET',ACCOUNT_API_BASE+'/devices.json',null,function(err,data,status){
+    if(status===404){cb(null,{},null);return;}
+    if(err){cb(err);return;}
+    try{var r=JSON.parse(data);cb(null,JSON.parse(atob(r.content)),r.sha);}catch(e){cb(e);}
+  });
+}
+
+function saveDeviceReg(obj,sha,cb){
+  var content=btoa(JSON.stringify(obj));
+  var body=JSON.stringify({message:'update device registry',content:content});
+  if(sha)body=JSON.stringify({message:'update device registry',content:content,sha:sha});
+  ghApi('PUT',ACCOUNT_API_BASE+'/devices.json',body,function(err,data,status){
+    if(err){cb(err);return;}
+    try{var r=JSON.parse(data);cb(null,r.content.sha);}catch(e){cb(e);}
+  });
+}
+
+function showAccountModal(){
+  initDeviceCode();
+  if(loggedInAccount){
+    showLoggedInModal();
+  }else{
+    showLoginModal();
+  }
+}
+
+function showLoginModal(){
+  var h='<div class="modal-name">账号</div><div class="modal-scroll">';
+  h+='<div style="margin:8px 0"><input id="accUser" type="text" placeholder="账号（数字或英文）" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:4px;font-size:14px"></div>';
+  h+='<div style="margin:8px 0"><input id="accPass" type="password" placeholder="密码" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:4px;font-size:14px"></div>';
+  h+='<div class="modal-btns"><button class="btn btn-sm" id="accLogin">登录</button><button class="btn btn-sm" id="accRegister">注册</button><button class="btn btn-sm" id="mbClose">取消</button></div>';
+  h+='</div>';
+  $modalBox.innerHTML=h;$modalOverlay.classList.add('show');
+  document.getElementById('mbClose').addEventListener('click',closeModal);
+  document.getElementById('accLogin').addEventListener('click',doLogin);
+  document.getElementById('accRegister').addEventListener('click',showRegisterModal);
+}
+
+function showRegisterModal(){
+  var h='<div class="modal-name">注册</div><div class="modal-scroll">';
+  h+='<div style="margin:8px 0"><input id="regUser" type="text" placeholder="账号（仅数字或英文，3-20字符）" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:4px;font-size:14px"></div>';
+  h+='<div style="margin:8px 0"><input id="regPass" type="password" placeholder="密码（4-20字符，数字/英文/英文标点）" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:4px;font-size:14px"></div>';
+  h+='<div style="margin:8px 0"><input id="regPass2" type="password" placeholder="确认密码" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:4px;font-size:14px"></div>';
+  h+='<div class="modal-btns"><button class="btn btn-sm" id="accRegConfirm">注册</button><button class="btn btn-sm" id="accRegCancel">取消</button></div>';
+  h+='</div>';
+  $modalBox.innerHTML=h;$modalOverlay.classList.add('show');
+  document.getElementById('accRegCancel').addEventListener('click',showLoginModal);
+  document.getElementById('accRegConfirm').addEventListener('click',doRegister);
+}
+
+function showLoggedInModal(){
+  var h='<div class="modal-name">账号</div><div class="modal-scroll">';
+  h+='<div style="padding:12px 0;font-size:14px;color:#555">账号：<span style="font-weight:600">'+loggedInAccount+'</span></div>';
+  h+='<div class="modal-btns"><button class="btn btn-sm" id="accUpload">上传云存档</button><button class="btn btn-sm" id="accLogout">登出</button><button class="btn btn-sm" id="mbClose">关闭</button></div>';
+  h+='</div>';
+  $modalBox.innerHTML=h;$modalOverlay.classList.add('show');
+  document.getElementById('mbClose').addEventListener('click',closeModal);
+  document.getElementById('accUpload').addEventListener('click',function(){uploadCloudSave(function(ok){showTip(ok?'上传成功':'上传失败');});});
+  document.getElementById('accLogout').addEventListener('click',doLogout);
+}
+
+function doLogin(){
+  var user=document.getElementById('accUser').value.trim();
+  var pass=document.getElementById('accPass').value;
+  if(!user||!pass){showTip('请输入账号和密码');return;}
+  getAccountFile(user,function(err,data){
+    if(err||!data){showFloatTip(document.getElementById('accLogin'),'账号或密码不正确',1000);return;}
+    if(data.password!==pass){showFloatTip(document.getElementById('accLogin'),'账号或密码不正确',1000);return;}
+    loggedInAccount=user;
+    try{localStorage.setItem('loggedInAccount',user);}catch(e){}
+    closeModal();
+    showFloatTip(document.body,'登录成功',3000);
+    checkCloudSave();
+    startAutoUpload();
+  });
+}
+
+function doRegister(){
+  var user=document.getElementById('regUser').value.trim();
+  var pass=document.getElementById('regPass').value;
+  var pass2=document.getElementById('regPass2').value;
+  if(!isValidAccount(user)){showTip('账号仅支持数字或英文，3-20字符');return;}
+  if(!isValidPassword(pass)){showTip('密码仅支持数字、英文和英文标点，4-20字符');return;}
+  if(pass!==pass2){showTip('两次密码不一致');return;}
+  getDeviceReg(function(err,devReg,sha){
+    if(err){showTip('注册失败，请重试');return;}
+    if(!devReg)devReg={};
+    if(devReg[deviceCode]){showTip('此设备已注册过账号');return;}
+    getAccountFile(user,function(err2,data){
+      if(data){showTip('该账号已被注册');return;}
+      var accountData={password:pass,deviceCode:deviceCode,createdAt:Date.now()};
+      saveAccountFile(user,accountData,null,function(err3,newSha){
+        if(err3){showTip('注册失败，请重试');return;}
+        devReg[deviceCode]=user;
+        saveDeviceReg(devReg,sha,function(err4){
+          if(err4){showTip('注册失败，请重试');return;}
+          loggedInAccount=user;
+          try{localStorage.setItem('loggedInAccount',user);}catch(e){}
+          closeModal();
+          showFloatTip(document.body,'注册成功，已自动登录',3000);
+          uploadCloudSave(function(ok){if(ok)showFloatTip(document.body,'云存档已上传',2000);});
+          startAutoUpload();
+        });
+      });
+    });
+  });
+}
+
+function doLogout(){
+  loggedInAccount=null;
+  try{localStorage.removeItem('loggedInAccount');}catch(e){}
+  if(autoUploadTimer){clearInterval(autoUploadTimer);autoUploadTimer=null;}
+  closeModal();
+  showFloatTip(document.body,'已登出',2000);
+}
+
+function uploadCloudSave(cb){
+  if(!loggedInAccount){if(cb)cb(false);return;}
+  var saveData=localStorage.getItem('xiImmortalSave');
+  if(!saveData){if(cb)cb(false);return;}
+  getAccountFile(loggedInAccount,function(err,data,sha){
+    if(err||!data){if(cb)cb(false);return;}
+    data.save=saveData;
+    data.lastUpload=Date.now();
+    saveAccountFile(loggedInAccount,data,sha,function(err2){
+      if(cb)cb(!err2);
+    });
+  });
+}
+
+function downloadCloudSave(cb){
+  if(!loggedInAccount){if(cb)cb(false);return;}
+  getAccountFile(loggedInAccount,function(err,data){
+    if(err||!data||!data.save){if(cb)cb(false);return;}
+    try{localStorage.setItem('xiImmortalSave',data.save);if(cb)cb(true);}catch(e){if(cb)cb(false);}
+  });
+}
+
+function checkCloudSave(){
+  if(!loggedInAccount)return;
+  getAccountFile(loggedInAccount,function(err,data){
+    if(err||!data)return;
+    if(data.save){
+      var h='<div class="modal-name">云存档</div><div class="modal-scroll">';
+      h+='<div style="font-size:14px;color:#555;padding:12px 0">检测到账号云存档，是否下载覆盖本地存档？</div>';
+      h+='<div class="modal-btns"><button class="btn btn-sm" id="accDownload">下载</button><button class="btn btn-sm" id="accSkip">跳过</button></div>';
+      h+='</div>';
+      $modalBox.innerHTML=h;$modalOverlay.classList.add('show');
+      document.getElementById('accDownload').addEventListener('click',function(){downloadCloudSave(function(ok){closeModal();if(ok){showFloatTip(document.body,'云存档已下载',2000);location.reload();}else{showTip('下载失败');}});});
+      document.getElementById('accSkip').addEventListener('click',function(){closeModal();});
+    }
+  });
+}
+
+function startAutoUpload(){
+  if(autoUploadTimer)clearInterval(autoUploadTimer);
+  autoUploadTimer=setInterval(function(){
+    if(loggedInAccount)uploadCloudSave(function(ok){});
+  },5*60*1000);
+}
+
+// Restore login state
+function restoreLogin(){
+  initDeviceCode();
+  var stored=null;
+  try{stored=localStorage.getItem('loggedInAccount');}catch(e){}
+  if(stored){
+    loggedInAccount=stored;
+    startAutoUpload();
+  }
+}
+
+function loadGame(){try{var s=localStorage.getItem(SAVE_KEY);if(!s)return false;var d=JSON.parse(s);if(!d)return false;stageIdx=d.sI||d.stageIdx||0;exp=d.exp||0;copper=d.cop||d.copper||0;playerHP=d.pHP||d.playerHP||50;playerMaxHP=d.pMHP||d.playerMaxHP||50;backpack=d.bp||d.backpack||[];warehouse=d.wh||d.warehouse||[];monsterKills=d.mk||d.monsterKills||{mosquito:0,mosquitoFemale:0};Object.keys(MONSTERS).forEach(function(k){if(!(k in monsterKills))monsterKills[k]=0;});containerOwned=d.cO||d.containerOwned||false;containerFemaleOwned=d.cFO||d.containerFemaleOwned||false;containerKillBase=d.cKB||0;containerFemaleKillBase=d.cFKB||0;craftStats=d.cs||d.craftStats||{herbPill:{crafted:0,used:0},grassKnot:{crafted:0}};Object.keys(RECIPES).forEach(function(k){if(!craftStats[k])craftStats[k]={crafted:0};});bonusHP=d.bHP||d.bonusHP||0;bonusATK=d.bATK||d.bonusATK||0;bonusDEF=d.bDEF||d.bonusDEF||0;bonusLifesteal=d.bLS||d.bonusLifesteal||0;bonusCrit=d.bC||0;bonusCritDmg=d.bCD||0;bonusDodge=d.bDo||0;bonusHit=d.bHi||0;bonusDefRat=d.bDR||0;bonusAtkRat=d.bAR||0;bonusDefSmith=d.bDS||0;bonusAtkZaiA=d.bAZ||0;bonusAtkBig=d.bAB||0;bonusAtkSnake=d.bAS||0;bonusHitSpider=d.bHS||0;bonusDodgeCentipede=d.bDC||0;bonusAtkBoar=d.bAB2||0;equipment=d.eq||d.equipment||[null,null,null,null,null,null];shopSlots=d.sh||d.shopSlots||[null,null,null,null,null,null];shopRefreshAt=d.sr||d.shopRefreshAt||0;lastTravelDest=d.lt||d.lastTravelDest||'grassland';craftLevels=d.cl||d.craftLevels||{alchemy:{lv:1,exp:0},accessory:{lv:1,exp:0},manual:{lv:1,exp:0},cook:{lv:1,exp:0}};if(!craftLevels.cook)craftLevels.cook={lv:1,exp:0};var _sl=d.sL||{};shopLevel={gridCount:_sl.gc||3,rareLevel:_sl.rl||1};skills=d.sk||{insight:0};mapExp=d.me||{};enchanted=d.en||{};variantKills=d.vk||{};if(d.sr)specialRealm=d.sr;if(d.cs2)completedSpecials=d.cs2;if(d.ss)specialStage=d.ss;if(d.spb){if(typeof d.spb==="object"&&!Array.isArray(d.spb))specialPctBonus=d.spb;}if(d.tge)trueGrassEssenceObtained=d.tge;if(d.st)stance=d.st;if(d.sP)stanceProficiency=d.sP;if(typeof d.cLv!=='undefined')cultLv=d.cLv;if(typeof d.cExp!=='undefined')cultExp=d.cExp;if(typeof d.tAL!=='undefined')tempArrayLv=d.tAL;if(d.bT)bodyTrain=d.bT;if(d.bTHP)bodyTrainBonusHP=d.bTHP;if(d.bTATK)bodyTrainBonusATK=d.bTATK;if(d.bTDEF)bodyTrainBonusDEF=d.bTDEF;if(d.cBHP||d.cBHP===0)cultBonusHP=d.cBHP;if(d.cBATK||d.cBATK===0)cultBonusATK=d.cBATK;if(d.cBDEF||d.cBDEF===0)cultBonusDEF=d.cBDEF;if(d.uR)unlockedRecipes=d.uR;if(d.cBHP||d.cBHP===0)cultBonusHP=d.cBHP;if(d.cBATK||d.cBATK===0)cultBonusATK=d.cBATK;if(d.cBDEF||d.cBDEF===0)cultBonusDEF=d.cBDEF;if(d.fac)facilities=d.fac;if(d.evtC)eventChance=d.evtC;if(d.uF)unlockedFacilities=d.uF;if(d.tLv)travelLv=d.tLv;if(d.tExp||d.tExp===0)travelExp=d.tExp;
 if(facilities.spiritField.owned||facilities.mushroomStump.owned)unlockedFacilities=true;
 collectFacilityOutput();if(d.cBHP||d.cBHP===0)cultBonusHP=d.cBHP;if(d.cBATK||d.cBATK===0)cultBonusATK=d.cBATK;if(d.cBDEF||d.cBDEF===0)cultBonusDEF=d.cBDEF;refreshMaxHP();return true;}catch(e){return false;}}
 var ITEMS={
@@ -79,7 +308,7 @@ var playerHP=50,playerMaxHP=50,monsterKills={mosquito:0,mosquitoFemale:0,rat:0,s
 var containerOwned=false,containerFemaleOwned=false,containerKillBase=0,containerFemaleKillBase=0,lastCombatLines=null,combatRepeat=0,defeatedInTravel=false;
 var unlockedRecipes={};
 var bodyTrain={hp:{lv:0,exp:0},atk:{lv:0,exp:0},def:{lv:0,exp:0}};var bodyTrainTimer=null;var bodyTrainTarget=null;var bodyTrainBonusHP=0,bodyTrainBonusATK=0,bodyTrainBonusDEF=0;
-var craftStats={herbPill:{crafted:0,used:0},grassKnot:{crafted:0},mosquitoPill:{crafted:0,used:0},jiXue:{crafted:0},geDang:{crafted:0},fanTan:{crafted:0},ratSkinAmulet:{crafted:0},songrongSoup:{crafted:0,used:0},lingzhiPill:{crafted:0,used:0},bearArmor:{crafted:0}};var craftLevels={alchemy:{lv:1,exp:0},accessory:{lv:1,exp:0},manual:{lv:1,exp:0},cook:{lv:1,exp:0}};var CRAFT_LEVEL_BASE={alchemy:50,accessory:10,manual:5};bonusHP=0,bonusATK=0,bonusDEF=0,bonusLifesteal=0;var cultLv=0,cultExp=0,tempArrayLv=0;var cultBonusHP=0,cultBonusATK=0,cultBonusDEF=0;var cultBonusHP=0,cultBonusATK=0,cultBonusDEF=0;var cultBonusHP=0,cultBonusATK=0,cultBonusDEF=0;var bonusCrit=0,bonusCritDmg=0,bonusDodge=0,bonusHit=0,bonusDefRat=0,bonusAtkRat=0,bonusDefSmith=0,bonusAtkZaiA=0,bonusAtkBig=0,bonusAtkSnake=0,bonusHitSpider=0,bonusDodgeCentipede=0,bonusAtkBoar=0;
+var craftStats={herbPill:{crafted:0,used:0},grassKnot:{crafted:0},mosquitoPill:{crafted:0,used:0},jiXue:{crafted:0},geDang:{crafted:0},fanTan:{crafted:0},ratSkinAmulet:{crafted:0},songrongSoup:{crafted:0,used:0},lingzhiPill:{crafted:0,used:0},bearArmor:{crafted:0}};var craftLevels={alchemy:{lv:1,exp:0},accessory:{lv:1,exp:0},manual:{lv:1,exp:0},cook:{lv:1,exp:0}};var CRAFT_LEVEL_BASE={alchemy:50,accessory:10,manual:5};bonusHP=0,bonusATK=0,bonusDEF=0,bonusLifesteal=0;var cultLv=0,cultExp=0,tempArrayLv=0;var cultBonusHP=0,cultBonusATK=0,cultBonusDEF=0;var cultBonusHP=0,cultBonusATK=0,cultBonusDEF=0;var cultBonusHP=0,cultBonusATK=0,cultBonusDEF=0;var cultBonusHP=0,cultBonusATK=0,cultBonusDEF=0;var bonusCrit=0,bonusCritDmg=0,bonusDodge=0,bonusHit=0,bonusDefRat=0,bonusAtkRat=0,bonusDefSmith=0,bonusAtkZaiA=0,bonusAtkBig=0,bonusAtkSnake=0,bonusHitSpider=0,bonusDodgeCentipede=0,bonusAtkBoar=0;
 var equipment=[null,null,null,null,null,null],infoTab='attr';
 var specialRealm=0,specialStage=0,specialPctBonus={hp:0,atk:0,def:0};var completedSpecials=[];function applySpecialEntryReward(){var _sf=[[{atk:3},{atk:6},{atk:9},{atk:12}],[{def:1},{def:2},{def:3},{def:4}],[{hp:10},{hp:20},{hp:30},{hp:50}],[{hp:5,atk:1,def:1},{hp:10,atk:2,def:2},{hp:20,atk:3,def:2},{hp:30,atk:5,def:3}],[{def:3},{def:6},{def:9},{def:12}],[{ls:0.01},{ls:0.015},{ls:0.02},{ls:0.025}],[{atkPct:1},{atkPct:1.5},{atkPct:2},{atkPct:2.5}],[{def:10},{def:13},{def:16},{def:20}],[{hp:100},{hp:150},{hp:200},{hp:250}],[{hp:100},{hp:150},{hp:200},{hp:250}],[{def:25},{def:40},{def:60},{def:80}],[{def:20},{def:30},{def:40},{def:50}],[{hp:200,atk:50,def:30},{hp:400,atk:100,def:50},{hp:800,atk:200,def:80},{hp:1000,atk:250,def:100}],[{hp:-100,atk:60,def:10},{hp:-100,atk:80,def:30},{hp:-100,atk:100,def:50},{hp:-100,atk:150,def:80}],[{def:80},{def:100},{def:150},{def:200}]];var _si=specialRealm-1;if(_si>=0&&_si<_sf.length){var _rf=_sf[_si][0];if(_rf.hp)bonusHP+=_rf.hp;if(_rf.atk)bonusATK+=_rf.atk;if(_rf.def)bonusDEF+=_rf.def;if(_rf.ls)bonusLifesteal+=_rf.ls;if(_rf.atkPct)ATTRS[0].atk=Math.round(ATTRS[0].atk*(1+_rf.atkPct/100));}}
 function getPctBonus(){var total=0;for(var i=1;i<=stageIdx;i++){var prev=getRealmIdx(i-1);if(i<=13)total+=BREAKTHROUGH_BONUS[0];else if(isRealmBreakthrough(i-1))total+=BREAKTHROUGH_BONUS[prev]*2;else total+=BREAKTHROUGH_BONUS[prev];}return total;}function getCultivateGainBonus(){var total=0;for(var i=1;i<=stageIdx;i++){var prev=getRealmIdx(i-1);if(i<=13)total+=1;else if(isRealmBreakthrough(i-1))total+=BREAKTHROUGH_BONUS[prev]*2;else total+=BREAKTHROUGH_BONUS[prev];}return total;}
@@ -382,7 +611,7 @@ if(stanceProficiency.desperate>=100)h+='<div class="attr-row" style="cursor:poin
 h+='</div>';el.innerHTML=h;}
 function showStanceInfo(sk){var names={balanced:'平衡',desperate:'拼命',cautious:'谨慎'};var prof=stanceProficiency[sk]||0;var baseAtk={balanced:100,desperate:150,cautious:70};var baseDef={balanced:100,desperate:150,cautious:70};var bonusRate={balanced:0.01,desperate:0.02,cautious:0.01};var curAtk=baseAtk[sk]+prof*bonusRate[sk];var curDef=baseDef[sk]-prof*bonusRate[sk];var descs={balanced:'造成'+curAtk.toFixed(2)+'%伤害，受到'+curDef.toFixed(2)+'%伤害。',desperate:'造成'+curAtk.toFixed(2)+'%伤害，受到'+curDef.toFixed(2)+'%伤害。',cautious:'造成'+curAtk.toFixed(2)+'%伤害，受到'+curDef.toFixed(2)+'%伤害。'};var h='<div class="modal-name">'+names[sk]+'架势</div>';h+='<div class="modal-desc">'+descs[sk]+'</div>';h+='<div class="modal-meta">等级: Lv.1</div>';h+='<div class="modal-meta">熟练度: '+prof+'/1000</div>';h+='<div class="modal-btns"><button class="btn btn-sm" id="mbClose">关闭</button></div>';$modalBox.innerHTML=h;$modalOverlay.classList.add('show');document.getElementById('mbClose').addEventListener('click',closeModal);}
 
-function startCultivate(){if(playerState==='traveling')return;if(playerState==='bodyTrain')stopBodyTrain();if(playerState==='cultivating')return;playerState='cultivating';expTimer=setInterval(function(){var _cultMult=getCultTotalBonus();var _baseGain=10+getCultivateGainBonus();var _finalGain=Math.floor(_baseGain*(1+getCultivateBonus())*_cultMult);setExp(exp+_finalGain);},10000);regenTimer=setInterval(function(){if(playerHP<playerMaxHP)playerHP=Math.min(playerMaxHP,playerHP+playerMaxHP*0.01);renderMain();cultExp++;if(cultExp>=getCultLvReq()){cultExp-=getCultLvReq();cultLv++;}var _bonusPct=0.005+cultLv*0.005;if(Math.random()<_bonusPct){bonusHP+=1;cultBonusHP+=1;refreshMaxHP();playerHP=playerMaxHP;showFloatTip($btnCult,'生命+1',3000);}if(Math.random()<_bonusPct){bonusATK+=0.1;cultBonusATK+=0.1;showFloatTip($btnCult,'攻击+0.1',3000);}if(Math.random()<_bonusPct){bonusDEF+=0.1;cultBonusDEF+=0.1;showFloatTip($btnCult,'防御+0.1',3000);}},1000);renderMain();}
+function startCultivate(){if(playerState==='traveling')return;if(playerState==='bodyTrain')stopBodyTrain();if(playerState==='cultivating')return;playerState='cultivating';expTimer=setInterval(function(){var _cultMult=getCultTotalBonus();var _baseGain=10+getCultivateGainBonus();var _finalGain=Math.floor(_baseGain*(1+getCultivateBonus())*_cultMult);setExp(exp+_finalGain);},10000);regenTimer=setInterval(function(){if(playerHP<playerMaxHP)playerHP=Math.min(playerMaxHP,playerHP+playerMaxHP*0.01);renderMain();cultExp++;if(cultExp>=getCultLvReq()){cultExp-=getCultLvReq();cultLv++;}var _bonusPct=0.005+cultLv*0.005;if(Math.random()<_bonusPct){bonusHP+=1;cultBonusHP+=1;refreshMaxHP();showFloatTip($btnCult,'生命+1',3000);}if(Math.random()<_bonusPct){bonusATK+=0.1;cultBonusATK+=0.1;showFloatTip($btnCult,'攻击+0.1',3000);}if(Math.random()<_bonusPct){bonusDEF+=0.1;cultBonusDEF+=0.1;showFloatTip($btnCult,'防御+0.1',3000);}},1000);renderMain();}
 function stopCultivate(){if(playerState!=='cultivating')return;playerState='idle';clearInterval(expTimer);expTimer=null;if(regenTimer){clearInterval(regenTimer);regenTimer=null;}renderMain();}
 $btnCult.addEventListener('click',function(){if(playerState==='traveling'){showFloatTip($btnCult,'游历中无法进行修炼');return;}if(playerState==='cultivating'){stopCultivate();}else{startCultivate();}});
 var $btnArray=document.getElementById('btnArray');if($btnArray)$btnArray.addEventListener('click',function(){var h='<div class="modal-name">阵法</div>';h+='<div style="font-size:11px;color:#999;padding:4px 0 8px">在修炼时展开阵法，以增强修炼效果</div>';h+='<div style="font-size:13px;padding:6px 0">临时阵法 Lv.'+tempArrayLv+'</div>';h+='<div style="font-size:13px;padding:6px 0">修为速率加成: +'+(tempArrayLv*10)+'%</div>';h+='<div style="font-size:13px;padding:6px 0">下一级花费: '+getArrayCost()+' 铜钱</div>';h+='<div class="modal-btns"><button class="btn btn-sm" id="mbArrayUp">提升</button><button class="btn btn-sm" id="mbClose">关闭</button></div>';$modalBox.innerHTML=h;$modalOverlay.classList.add('show');document.getElementById('mbClose').addEventListener('click',closeModal);document.getElementById('mbArrayUp').addEventListener('click',function(){var cost=getArrayCost();if(copper<cost){showTip('铜钱不足');return;}setCopper(copper-cost);tempArrayLv++;saveGame();closeModal();$btnArray.click();});});
@@ -632,4 +861,4 @@ function showMountainStumpEvent(){
 }
 function doReturn(){var wd=defeatedInTravel;lastTravelDest=selectedDest||lastTravelDest||'grassland';playerState='idle';travelProg=0;travelDist=0;travelExplores=0;inCombat=false;enemyData=null;lastCombatLines=null;combatRepeat=0;defeatedInTravel=false;selectedDest=null;clearTravelMsg();renderDestList();renderTravelLower();renderMain();if(wd)setTimeout(function(){startCultivate();},100);}
 var _facBtnH=document.getElementById('btnFacility');if(_facBtnH)_facBtnH.addEventListener('click',showFacilityModal);
-loadGame();refreshMaxHP();renderMain();renderDestList();renderTravelLower();renderStorage();ensureShop();renderCraft();renderBodyTrain();renderInfo();
+restoreLogin();loadGame();refreshMaxHP();renderMain();renderDestList();renderTravelLower();renderStorage();ensureShop();renderCraft();renderBodyTrain();renderInfo();
