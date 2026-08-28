@@ -8,7 +8,7 @@
 *{margin:0;padding:0;box-sizing:border-box}
 html,body{width:100%;height:100%;overflow:hidden;font-family:"PingFang SC","Microsoft YaHei","Noto Sans SC",sans-serif;background:#fff;color:#444;display:flex;flex-direction:column;align-items:center;user-select:none;-webkit-user-select:none;touch-action:manipulation}
 .page{display:none;width:100%;flex:1;overflow-y:auto}.page.active{display:flex;flex-direction:column;align-items:center}
-.container{width:100%;max-width:420px;height:100%;display:flex;flex-direction:column;align-items:center;padding:0 24px}
+.container{width:100%;max-width:420px;height:100%;display:flex;flex-direction:column;align-items:center;padding:0 24px;position:relative}
 .top-bar{width:100%;display:flex;justify-content:space-between;align-items:center;padding:16px 0 8px;font-size:13px;color:#999}
 .top-bar .val{color:#555;font-weight:600}
 .stage-area{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;width:100%}
@@ -35,7 +35,7 @@ html,body{width:100%;height:100%;overflow:hidden;font-family:"PingFang SC","Micr
 .travel-btns{width:100%;display:flex;gap:8px;justify-content:center;padding:8px 0 4px;flex-shrink:0}
 .travel-btns .travel-btn{min-width:72px}
 .travel-confirm-text{font-size:15px;color:#555;margin-bottom:16px}
-#btnAccount{position:fixed!important;right:12px;bottom:68px;z-index:9999;min-width:48px;display:block!important;background:#4CAF50!important;color:#fff!important;box-shadow:0 2px 8px rgba(0,0,0,0.3)}
+#btnAccount{position:absolute;right:8px;top:50%;transform:translateY(-50%);z-index:50;min-width:48px;height:38px;background:#4CAF50;color:#fff;box-shadow:0 2px 8px rgba(0,0,0,0.3);border-radius:6px;font-size:14px;border:none;cursor:pointer}
 .travel-btn{height:42px;padding:0 20px;border:none;border-radius:6px;font-size:14px;font-weight:600;cursor:pointer;background:#f0f0f0;color:#555;border:1px solid #ddd}
 .travel-info{font-size:13px;color:#999;margin-bottom:12px;text-align:center}
 .travel-info .val{color:#555;font-weight:600}
@@ -101,7 +101,7 @@ html,body{width:100%;height:100%;overflow:hidden;font-family:"PingFang SC","Micr
 <div id="notifArea"></div>
 <div id="modalOverlay"><div class="modal-box" id="modalBox"></div></div>
 <div class="page active" id="pageMain"><div class="container"><div class="top-bar"><div><span class="label">境界 </span><span class="val" id="stageNum">练气一层</span></div><div id="stateIndicator" style="font-size:12px;color:#4CAF50;font-weight:600"></div><div><span class="label">修为 </span><span class="val" id="topExp">0</span></div></div><div class="stage-area"><div class="realm-name" id="realmName">练气一层</div><div class="progress-section"><div class="progress-text">距离突破还需 <span class="pct" id="pctText">0%</span> <span class="exp" id="expText">(0 / 100)</span></div><div class="progress-bar-outer"><div class="progress-bar-inner" id="progressBar" style="width:0%"></div></div></div></div><div class="action-area"><div class="speed-info" id="speedInfo">待修炼</div><div style="position:relative;width:100%;max-width:260px;margin:0 auto"><button class="btn btn-sm" id="btnFacility" style="position:absolute;right:-52px;top:0;min-width:48px;display:none">设施</button>
-<button class="btn btn-sm" id="btnArray" style="position:absolute;left:-52px;top:0;min-width:48px">阵法</button><button class="btn btn-wide btn-break show" id="btnCultivate">修 炼</button></div><button class="btn btn-wide btn-break" id="btnBreak">突 破</button><button class="btn btn-sm" id="btnDebug" style="margin-top:8px;font-size:11px;opacity:0.5">开发者调试</button></div></div></div>
+<button class="btn btn-sm" id="btnArray" style="position:absolute;left:-52px;top:0;min-width:48px">阵法</button><button class="btn btn-wide btn-break show" id="btnCultivate">修 炼</button></div><button class="btn btn-sm" id="btnAccount">账号</button><button class="btn btn-wide btn-break" id="btnBreak">突 破</button><button class="btn btn-sm" id="btnDebug" style="margin-top:8px;font-size:11px;opacity:0.5">开发者调试</button></div></div></div>
 <div class="page" id="pageTravel"><div class="travel-wrap"><div class="travel-section"><div class="travel-section-title">选择目的地</div><div class="dest-list" id="destList"></div></div><div class="travel-lower" id="travelLower"></div></div></div>
 <div class="page" id="pageStorage"><div class="page-wrap" id="storageWrap"></div></div>
 <div class="page" id="pageShop"><div class="page-wrap" id="shopWrap"></div></div>
@@ -109,7 +109,7 @@ html,body{width:100%;height:100%;overflow:hidden;font-family:"PingFang SC","Micr
 <div class="page" id="pageBodyTrain"><div class="craft-wrap" id="bodyTrainWrap"></div></div>
 <div class="page" id="pageProfile"><div class="profile-wrap"><div class="craft-tabs" id="infoTabs"><button class="craft-tab active" data-tab="attr">属性</button><button class="craft-tab" data-tab="stats">统计</button><button class="craft-tab" data-tab="codex">图鉴</button><button class="craft-tab" data-tab="skills">技能天赋</button></div><div id="infoContent"></div></div></div>
 <div class="tab-bar"><button class="tab-btn active" data-page="pageMain">主界面</button><button class="tab-btn" data-page="pageTravel">游历</button><button class="tab-btn" data-page="pageStorage">存储</button><button class="tab-btn" data-page="pageShop">商店</button><button class="tab-btn" data-page="pageCraft">制作</button><button class="tab-btn" data-page="pageBodyTrain">练体</button><button class="tab-btn" data-page="pageProfile">信息</button></div>
-<button class="btn btn-sm" id="btnAccount" style="position:fixed!important;right:12px;bottom:68px;z-index:9999;min-width:48px;background:#4CAF50;color:#fff;box-shadow:0 2px 8px rgba(0,0,0,0.3)">账号</button>
+
 <script>
 (function(){
   var localSrc='game.js';
