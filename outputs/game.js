@@ -23,8 +23,7 @@ function initDeviceCode(){
 }
 
 function isValidAccount(a){return /^[a-zA-Z0-9]+$/.test(a)&&a.length>=3&&a.length<=20;}
-function isValidPassword(p){var re=/^[a-zA-Z0-9!@#$%^&*()_+\-=\[\]{}|;:\x27.,<>?/~\x60 ]+$/;return re.test(p)&&p.length>=4&&p.length<=20;}
-
+function isValidPassword(p){var re=/^[a-zA-Z0-9!@#$%^&*()_+\-=\[\]{}|;:',.\/?~ ]+$/;return re.test(p)&&p.length>=4&&p.length<=20;}
 function loadGistData(cb){
   var now=Date.now();
   if(gistCache&&now-gistCacheTime<5000){cb(null,gistCache);return;}
@@ -210,7 +209,7 @@ function startAutoUpload(){
   },5*60*1000);
 }
 
-function restoreLogin(){function restoreLogin(){
+function restoreLogin(){
   initDeviceCode();
   var stored=null;
   try{stored=localStorage.getItem('loggedInAccount');}catch(e){}
