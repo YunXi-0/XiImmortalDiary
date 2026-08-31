@@ -2,16 +2,16 @@ var APP_VERSION='0.2.3';
 var SAVE_KEY='xiImmortalSave',SAVE_VER=4;
 function saveGame(){var d={v:SAVE_VER,sI:stageIdx,exp:exp,cop:copper,pHP:playerHP,pMHP:playerMaxHP,bp:backpack,wh:warehouse,mk:monsterKills,cO:containerOwned,cFO:containerFemaleOwned,cKB:containerKillBase,cFKB:containerFemaleKillBase,cs:craftStats,bHP:bonusHP,bATK:bonusATK,bDEF:bonusDEF,bLS:bonusLifesteal,bC:bonusCrit,bCD:bonusCritDmg,bDo:bonusDodge,bHi:bonusHit,bDR:bonusDefRat,bAR:bonusAtkRat,bDS:bonusDefSmith,bAZ:bonusAtkZaiA,bAB:bonusAtkBig,bAS:bonusAtkSnake,bHS:bonusHitSpider,bDC:bonusDodgeCentipede,bAB2:bonusAtkBoar,eq:equipment,sh:shopSlots,sr:shopRefreshAt,lt:lastTravelDest,cl:craftLevels,sL:{gc:shopLevel.gridCount,rl:shopLevel.rareLevel},sk:skills,me:mapExp,en:enchanted,vk:variantKills,sr:specialRealm,ss:specialStage,cs2:completedSpecials,spb:specialPctBonus,tge:trueGrassEssenceObtained,st:stance,sP:stanceProficiency,cLv:cultLv,cExp:cultExp,tAL:tempArrayLv,bT:bodyTrain,bTHP:bodyTrainBonusHP,bTATK:bodyTrainBonusATK,bTDEF:bodyTrainBonusDEF,cBHP:cultBonusHP,cBATK:cultBonusATK,cBDEF:cultBonusDEF,uR:unlockedRecipes,fac:facilities,evtC:eventChance,uF:unlockedFacilities,tLv:travelLv,tExp:travelExp};try{localStorage.setItem(SAVE_KEY,JSON.stringify(d));}catch(e){}}
 
-// ========== Account System (Gist-based) ==========
-var GIST_ID='9049c4ad052bd98393340c5af4973c14';
-var GIST_TOKEN=(typeof AndroidBridge!=='undefined'&&AndroidBridge.getToken)?AndroidBridge.getToken():'';
+// ========== Account System (GitHub Contents API) ==========
+var REPO_OWNER='YunXi-0';
+var REPO_NAME='XiImmortalDiary';
+var DATA_PATH='data/accounts.json';
 var loggedInAccount=null;
 var autoUploadTimer=null;
 var deviceCode=null;
 var gistCache=null;
 var gistCacheTime=0;
-var GIST_RAW_URL='https://gist.githubusercontent.com/YunXi-0/'+GIST_ID+'/raw/accounts.json';
-var GIST_API_WRITE='https://api.github.com/gists/'+GIST_ID;
+var GIST_TOKEN=(typeof AndroidBridge!=='undefined'&&AndroidBridge.getToken)?AndroidBridge.getToken():'';
 
 function initDeviceCode(){
   if(deviceCode)return;
@@ -28,52 +28,50 @@ function isValidPassword(p){var re=/^[a-zA-Z0-9!@#$%^&*()_+\-=\[\]{}|;:\x27.,<>?
 function loadGistData(cb){
   var now=Date.now();
   if(gistCache&&now-gistCacheTime<5000){cb(null,gistCache);return;}
-  var gistProxies=[
-    'https://gist.githubusercontent.com/YunXi-0/'+GIST_ID+'/raw/accounts.json',
-    'https://ghfast.top/https://gist.githubusercontent.com/YunXi-0/'+GIST_ID+'/raw/accounts.json',
-    'https://ghproxy.com/?url=https://gist.githubusercontent.com/YunXi-0/'+GIST_ID+'/raw/accounts.json'
-  ];
-  function tryUrl(idx){
-    if(idx>=gistProxies.length){cb('all sources failed');return;}
-    var url=gistProxies[idx]+'?t='+now;
-    var xhr=new XMLHttpRequest();
-    xhr.open('GET',url,true);
-    xhr.timeout=8000;
-    xhr.onload=function(){
-      if(xhr.status===200){
-        try{var data=JSON.parse(xhr.responseText);gistCache=data;gistCacheTime=now;cb(null,data);}
-        catch(e){tryUrl(idx+1);}
-      }else{tryUrl(idx+1);}
-    };
-    xhr.onerror=function(){tryUrl(idx+1);};
-    xhr.ontimeout=function(){tryUrl(idx+1);};
-    xhr.send();
-  }
-  tryUrl(0);
+  var rawUrl='https://raw.githubusercontent.com/'+REPO_OWNER+'/'+REPO_NAME+'/main/'+DATA_PATH+'?t='+now;
+  var xhr=new XMLHttpRequest();
+  xhr.open('GET',rawUrl,true);
+  xhr.timeout=10000;
+  xhr.onload=function(){
+    if(xhr.status===200){
+      try{var data=JSON.parse(xhr.responseText);gistCache=data;gistCacheTime=now;cb(null,data);}
+      catch(e){cb(e);}
+    }else{cb('status:'+xhr.status);}
+  };
+  xhr.onerror=function(){cb('network error');};
+  xhr.ontimeout=function(){cb('timeout');};
+  xhr.send();
 }
 
 function saveGistData(data,cb){
-  var body=JSON.stringify({files:{'accounts.json':{content:JSON.stringify(data)}}});
-  var proxies=['','https://ghfast.top/','https://ghproxy.com/?url='];
-  var url=GIST_API_WRITE;
-  function tryProxy(idx){
-    if(idx>=proxies.length){cb('all proxies failed');return;}
-    var target=proxies[idx]?proxies[idx]+encodeURIComponent(url):url;
-    var xhr=new XMLHttpRequest();
-    xhr.open('PATCH',target,true);
-    xhr.setRequestHeader('Authorization','token '+GIST_TOKEN);
-    xhr.setRequestHeader('Content-Type','application/json');
-    xhr.timeout=8000;
-    xhr.onload=function(){
-      if(xhr.status===200){try{gistCache=data;gistCacheTime=Date.now();}catch(e){}cb(null);}
-      else if(xhr.status===403||xhr.status===0){tryProxy(idx+1);}
-      else{cb('status:'+xhr.status);}
+  if(!GIST_TOKEN){cb('no token');return;}
+  var getUrl='https://api.github.com/repos/'+REPO_OWNER+'/'+REPO_NAME+'/contents/'+DATA_PATH;
+  var getxhr=new XMLHttpRequest();
+  getxhr.open('GET',getUrl,true);
+  getxhr.setRequestHeader('Authorization','token '+GIST_TOKEN);
+  getxhr.timeout=10000;
+  getxhr.onload=function(){
+    var sha=null;
+    if(getxhr.status===200){
+      try{sha=JSON.parse(getxhr.responseText).sha;}catch(e){}
+    }
+    var body=JSON.stringify({message:'update accounts',content:btoa(unescape(encodeURIComponent(JSON.stringify(data)))),sha:sha});
+    var putxhr=new XMLHttpRequest();
+    putxhr.open('PUT',getUrl,true);
+    putxhr.setRequestHeader('Authorization','token '+GIST_TOKEN);
+    putxhr.setRequestHeader('Content-Type','application/json');
+    putxhr.timeout=10000;
+    putxhr.onload=function(){
+      if(putxhr.status===200||putxhr.status===201){try{gistCache=data;gistCacheTime=Date.now();}catch(e){}cb(null);}
+      else{cb('status:'+putxhr.status);}
     };
-    xhr.onerror=function(){tryProxy(idx+1);};
-    xhr.ontimeout=function(){tryProxy(idx+1);};
-    xhr.send(body);
-  }
-  tryProxy(0);
+    putxhr.onerror=function(){cb('network error');};
+    putxhr.ontimeout=function(){cb('timeout');};
+    putxhr.send(body);
+  };
+  getxhr.onerror=function(){cb('network error');};
+  getxhr.ontimeout=function(){cb('timeout');};
+  getxhr.send();
 }
 
 function showAccountModal(){
@@ -211,8 +209,8 @@ function startAutoUpload(){
     if(loggedInAccount)uploadCloudSave(function(ok){});
   },5*60*1000);
 }
-// Restore login state
-function restoreLogin(){
+
+function restoreLogin(){function restoreLogin(){
   initDeviceCode();
   var stored=null;
   try{stored=localStorage.getItem('loggedInAccount');}catch(e){}
