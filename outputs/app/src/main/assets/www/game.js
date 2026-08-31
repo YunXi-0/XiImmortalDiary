@@ -4,7 +4,7 @@ function saveGame(){var d={v:SAVE_VER,sI:stageIdx,exp:exp,cop:copper,pHP:playerH
 
 // ========== Account System (Gist-based) ==========
 var GIST_ID='9049c4ad052bd98393340c5af4973c14';
-var GIST_TOKEN='';
+var GIST_TOKEN=(typeof AndroidBridge!=='undefined'&&AndroidBridge.getToken)?AndroidBridge.getToken():'';
 var loggedInAccount=null;
 var autoUploadTimer=null;
 var deviceCode=null;
@@ -54,7 +54,7 @@ function loadGistData(cb){
 
 function saveGistData(data,cb){
   var body=JSON.stringify({files:{'accounts.json':{content:JSON.stringify(data)}}});
-  var proxies=['','https://corsproxy.io/?','https://api.allorigins.win/raw?url='];
+  var proxies=['','https://ghfast.top/','https://ghproxy.com/?url='];
   var url=GIST_API_WRITE;
   function tryProxy(idx){
     if(idx>=proxies.length){cb('all proxies failed');return;}
