@@ -28,21 +28,28 @@ function isValidPassword(p){var re=/^[a-zA-Z0-9!@#$%^&*()_+\-=\[\]{}|;:\x27.,<>?
 function loadGistData(cb){
   var now=Date.now();
   if(gistCache&&now-gistCacheTime<5000){cb(null,gistCache);return;}
-  var xhr=new XMLHttpRequest();
-  xhr.open('GET',GIST_RAW_URL+'?t='+now,true);
-  xhr.timeout=10000;
-  xhr.onload=function(){
-    if(xhr.status===200){
-      try{
-        var data=JSON.parse(xhr.responseText);
-        gistCache=data;gistCacheTime=now;
-        cb(null,data);
-      }catch(e){cb(e);}
-    }else{cb('status:'+xhr.status);}
-  };
-  xhr.onerror=function(){cb('network error');};
-  xhr.ontimeout=function(){cb('timeout');};
-  xhr.send();
+  var gistProxies=[
+    'https://gist.githubusercontent.com/YunXi-0/'+GIST_ID+'/raw/accounts.json',
+    'https://ghfast.top/https://gist.githubusercontent.com/YunXi-0/'+GIST_ID+'/raw/accounts.json',
+    'https://ghproxy.com/?url=https://gist.githubusercontent.com/YunXi-0/'+GIST_ID+'/raw/accounts.json'
+  ];
+  function tryUrl(idx){
+    if(idx>=gistProxies.length){cb('all sources failed');return;}
+    var url=gistProxies[idx]+'?t='+now;
+    var xhr=new XMLHttpRequest();
+    xhr.open('GET',url,true);
+    xhr.timeout=8000;
+    xhr.onload=function(){
+      if(xhr.status===200){
+        try{var data=JSON.parse(xhr.responseText);gistCache=data;gistCacheTime=now;cb(null,data);}
+        catch(e){tryUrl(idx+1);}
+      }else{tryUrl(idx+1);}
+    };
+    xhr.onerror=function(){tryUrl(idx+1);};
+    xhr.ontimeout=function(){tryUrl(idx+1);};
+    xhr.send();
+  }
+  tryUrl(0);
 }
 
 function saveGistData(data,cb){
