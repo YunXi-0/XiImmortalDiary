@@ -2,12 +2,16 @@ var APP_VERSION='0.2.3';
 var SAVE_KEY='xiImmortalSave',SAVE_VER=4;
 function saveGame(){var d={v:SAVE_VER,sI:stageIdx,exp:exp,cop:copper,pHP:playerHP,pMHP:playerMaxHP,bp:backpack,wh:warehouse,mk:monsterKills,cO:containerOwned,cFO:containerFemaleOwned,cKB:containerKillBase,cFKB:containerFemaleKillBase,cs:craftStats,bHP:bonusHP,bATK:bonusATK,bDEF:bonusDEF,bLS:bonusLifesteal,bC:bonusCrit,bCD:bonusCritDmg,bDo:bonusDodge,bHi:bonusHit,bDR:bonusDefRat,bAR:bonusAtkRat,bDS:bonusDefSmith,bAZ:bonusAtkZaiA,bAB:bonusAtkBig,bAS:bonusAtkSnake,bHS:bonusHitSpider,bDC:bonusDodgeCentipede,bAB2:bonusAtkBoar,eq:equipment,sh:shopSlots,sr:shopRefreshAt,lt:lastTravelDest,cl:craftLevels,sL:{gc:shopLevel.gridCount,rl:shopLevel.rareLevel},sk:skills,me:mapExp,en:enchanted,vk:variantKills,sr:specialRealm,ss:specialStage,cs2:completedSpecials,spb:specialPctBonus,tge:trueGrassEssenceObtained,st:stance,sP:stanceProficiency,cLv:cultLv,cExp:cultExp,tAL:tempArrayLv,bT:bodyTrain,bTHP:bodyTrainBonusHP,bTATK:bodyTrainBonusATK,bTDEF:bodyTrainBonusDEF,cBHP:cultBonusHP,cBATK:cultBonusATK,cBDEF:cultBonusDEF,uR:unlockedRecipes,fac:facilities,evtC:eventChance,uF:unlockedFacilities,tLv:travelLv,tExp:travelExp};try{localStorage.setItem(SAVE_KEY,JSON.stringify(d));}catch(e){}}
 
-// ========== Account System ==========
-var ACCOUNT_API_BASE='https://xiimmortal-gh-proxy.1061651602.workers.dev/repos/YunXi-0/XiImmortalDiary/contents/data';
-var ACCOUNT_TOKEN='cf_proxy';
+// ========== Account System (Gist-based) ==========
+var GIST_ID='9049c4ad052bd98393340c5af4973c14';
+var GIST_TOKEN='';
 var loggedInAccount=null;
 var autoUploadTimer=null;
 var deviceCode=null;
+var gistCache=null;
+var gistCacheTime=0;
+var GIST_RAW_URL='https://gist.githubusercontent.com/YunXi-0/'+GIST_ID+'/raw/accounts.json';
+var GIST_API_WRITE='https://api.github.com/gists/'+GIST_ID;
 
 function initDeviceCode(){
   if(deviceCode)return;
@@ -19,76 +23,69 @@ function initDeviceCode(){
 }
 
 function isValidAccount(a){return /^[a-zA-Z0-9]+$/.test(a)&&a.length>=3&&a.length<=20;}
-function isValidPassword(p){return /^[a-zA-Z0-9!@#$%^&*()_+\-=\[\]{}|;:',.<>?/~`]+$/.test(p)&&p.length>=4&&p.length<=20;}
+function isValidPassword(p){var re=/^[a-zA-Z0-9!@#$%^&*()_+\-=\[\]{}|;:\x27.,<>?/~\x60 ]+$/;return re.test(p)&&p.length>=4&&p.length<=20;}
 
-function ghApi(method,urlPath,body,cb){
-  var proxyUrl=urlPath;
-  var xhr=new XMLHttpRequest();
-  xhr.open(method,proxyUrl,true);
-  xhr.setRequestHeader('Authorization','token '+ACCOUNT_TOKEN);
-  xhr.setRequestHeader('Accept','application/vnd.github.v3+json');
-  if(body)xhr.setRequestHeader('Content-Type','application/json');
-  xhr.onload=function(){cb(null,xhr.responseText,xhr.status);};
-  xhr.onerror=function(){cb('network error');};
-  xhr.send(body||null);
+function loadGistData(cb){
+  var now=Date.now();
+  if(gistCache&&now-gistCacheTime<5000){cb(null,gistCache);return;}
+  var gistProxies=[
+    'https://gist.githubusercontent.com/YunXi-0/'+GIST_ID+'/raw/accounts.json',
+    'https://ghfast.top/https://gist.githubusercontent.com/YunXi-0/'+GIST_ID+'/raw/accounts.json',
+    'https://ghproxy.com/?url=https://gist.githubusercontent.com/YunXi-0/'+GIST_ID+'/raw/accounts.json'
+  ];
+  function tryUrl(idx){
+    if(idx>=gistProxies.length){cb('all sources failed');return;}
+    var url=gistProxies[idx]+'?t='+now;
+    var xhr=new XMLHttpRequest();
+    xhr.open('GET',url,true);
+    xhr.timeout=8000;
+    xhr.onload=function(){
+      if(xhr.status===200){
+        try{var data=JSON.parse(xhr.responseText);gistCache=data;gistCacheTime=now;cb(null,data);}
+        catch(e){tryUrl(idx+1);}
+      }else{tryUrl(idx+1);}
+    };
+    xhr.onerror=function(){tryUrl(idx+1);};
+    xhr.ontimeout=function(){tryUrl(idx+1);};
+    xhr.send();
+  }
+  tryUrl(0);
 }
 
-function getAccountFile(account,cb){
-  ghApi('GET',ACCOUNT_API_BASE+'/account_'+account+'.json',null,function(err,data,status){
-    if(status===404){cb(null,null);return;}
-    if(err){cb(err);return;}
-    try{var r=JSON.parse(data);var content=atob(r.content);cb(null,JSON.parse(content),r.sha);}catch(e){cb(e);}
-  });
-}
-
-function saveAccountFile(account,obj,sha,cb){
-  var content=btoa(JSON.stringify(obj));
-  var body=JSON.stringify({message:'update account '+account,content:content});
-  if(sha)body=JSON.stringify({message:'update account '+account,content:content,sha:sha});
-  var url=ACCOUNT_API_BASE+'/account_'+account+'.json';
-  var method=sha?'PUT':'PUT';
-  ghApi(method,url,body,function(err,data,status){
-    if(err){cb(err);return;}
-    try{var r=JSON.parse(data);cb(null,r.content.sha);}catch(e){cb(e);}
-  });
-}
-
-function deleteAccountFile(account,sha,cb){
-  ghApi('DELETE',ACCOUNT_API_BASE+'/account_'+account+'.json',JSON.stringify({message:'delete account '+account,sha:sha}),function(err,data,status){cb(err);});
-}
-
-function getDeviceReg(cb){
-  ghApi('GET',ACCOUNT_API_BASE+'/devices.json',null,function(err,data,status){
-    if(status===404){cb(null,{},null);return;}
-    if(err){cb(err);return;}
-    try{var r=JSON.parse(data);cb(null,JSON.parse(atob(r.content)),r.sha);}catch(e){cb(e);}
-  });
-}
-
-function saveDeviceReg(obj,sha,cb){
-  var content=btoa(JSON.stringify(obj));
-  var body=JSON.stringify({message:'update device registry',content:content});
-  if(sha)body=JSON.stringify({message:'update device registry',content:content,sha:sha});
-  ghApi('PUT',ACCOUNT_API_BASE+'/devices.json',body,function(err,data,status){
-    if(err){cb(err);return;}
-    try{var r=JSON.parse(data);cb(null,r.content.sha);}catch(e){cb(e);}
-  });
+function saveGistData(data,cb){
+  var body=JSON.stringify({files:{'accounts.json':{content:JSON.stringify(data)}}});
+  var proxies=['','https://corsproxy.io/?','https://api.allorigins.win/raw?url='];
+  var url=GIST_API_WRITE;
+  function tryProxy(idx){
+    if(idx>=proxies.length){cb('all proxies failed');return;}
+    var target=proxies[idx]?proxies[idx]+encodeURIComponent(url):url;
+    var xhr=new XMLHttpRequest();
+    xhr.open('PATCH',target,true);
+    xhr.setRequestHeader('Authorization','token '+GIST_TOKEN);
+    xhr.setRequestHeader('Content-Type','application/json');
+    xhr.timeout=8000;
+    xhr.onload=function(){
+      if(xhr.status===200){try{gistCache=data;gistCacheTime=Date.now();}catch(e){}cb(null);}
+      else if(xhr.status===403||xhr.status===0){tryProxy(idx+1);}
+      else{cb('status:'+xhr.status);}
+    };
+    xhr.onerror=function(){tryProxy(idx+1);};
+    xhr.ontimeout=function(){tryProxy(idx+1);};
+    xhr.send(body);
+  }
+  tryProxy(0);
 }
 
 function showAccountModal(){
   initDeviceCode();
-  if(loggedInAccount){
-    showLoggedInModal();
-  }else{
-    showLoginModal();
-  }
+  if(loggedInAccount){showLoggedInModal();}else{showLoginModal();}
 }
 
 function showLoginModal(){
-  var h='<div class="modal-name">账号</div><div class="modal-scroll">';
-  h+='<div style="margin:8px 0"><input id="accUser" type="text" placeholder="账号（数字或英文）" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:4px;font-size:14px"></div>';
-  h+='<div style="margin:8px 0"><input id="accPass" type="password" placeholder="密码" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:4px;font-size:14px"></div>';
-  h+='<div class="modal-btns"><button class="btn btn-sm" id="accLogin">登录</button><button class="btn btn-sm" id="accRegister">注册</button><button class="btn btn-sm" id="mbClose">取消</button></div>';
+  var h='<div class="modal-name">'+String.fromCharCode(36080,21495)+'</div><div class="modal-scroll">';
+  h+='<div style="margin:8px 0"><input id="accUser" type="text" placeholder="'+String.fromCharCode(36080,21495,65288,25968,23383,25110,33529,25991,65289)+'" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:4px;font-size:14px"></div>';
+  h+='<div style="margin:8px 0"><input id="accPass" type="password" placeholder="'+String.fromCharCode(23494,30721)+'" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:4px;font-size:14px"></div>';
+  h+='<div class="modal-btns"><button class="btn btn-sm" id="accLogin">'+String.fromCharCode(30331,24405)+'</button><button class="btn btn-sm" id="accRegister">'+String.fromCharCode(27880,20876)+'</button><button class="btn btn-sm" id="mbClose">'+String.fromCharCode(21462,28040)+'</button></div>';
   h+='</div>';
   $modalBox.innerHTML=h;$modalOverlay.classList.add('show');
   document.getElementById('mbClose').addEventListener('click',closeModal);
@@ -97,11 +94,11 @@ function showLoginModal(){
 }
 
 function showRegisterModal(){
-  var h='<div class="modal-name">注册</div><div class="modal-scroll">';
-  h+='<div style="margin:8px 0"><input id="regUser" type="text" placeholder="账号（仅数字或英文，3-20字符）" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:4px;font-size:14px"></div>';
-  h+='<div style="margin:8px 0"><input id="regPass" type="password" placeholder="密码（4-20字符，数字/英文/英文标点）" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:4px;font-size:14px"></div>';
-  h+='<div style="margin:8px 0"><input id="regPass2" type="password" placeholder="确认密码" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:4px;font-size:14px"></div>';
-  h+='<div class="modal-btns"><button class="btn btn-sm" id="accRegConfirm">注册</button><button class="btn btn-sm" id="accRegCancel">取消</button></div>';
+  var h='<div class="modal-name">'+String.fromCharCode(27880,20876)+'</div><div class="modal-scroll">';
+  h+='<div style="margin:8px 0"><input id="regUser" type="text" placeholder="'+String.fromCharCode(36080,21495,65288,20165,25968,23383,25110,33529,25991,65292,51,45,50,48,23383,31526,65289)+'" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:4px;font-size:14px"></div>';
+  h+='<div style="margin:8px 0"><input id="regPass" type="password" placeholder="'+String.fromCharCode(23494,30721,65288,52,45,50,48,23383,31526,65289)+'" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:4px;font-size:14px"></div>';
+  h+='<div style="margin:8px 0"><input id="regPass2" type="password" placeholder="'+String.fromCharCode(30830,35748,23494,30721)+'" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:4px;font-size:14px"></div>';
+  h+='<div class="modal-btns"><button class="btn btn-sm" id="accRegConfirm">'+String.fromCharCode(27880,20876)+'</button><button class="btn btn-sm" id="accRegCancel">'+String.fromCharCode(21462,28040)+'</button></div>';
   h+='</div>';
   $modalBox.innerHTML=h;$modalOverlay.classList.add('show');
   document.getElementById('accRegCancel').addEventListener('click',showLoginModal);
@@ -109,27 +106,29 @@ function showRegisterModal(){
 }
 
 function showLoggedInModal(){
-  var h='<div class="modal-name">账号</div><div class="modal-scroll">';
-  h+='<div style="padding:12px 0;font-size:14px;color:#555">账号：<span style="font-weight:600">'+loggedInAccount+'</span></div>';
-  h+='<div class="modal-btns"><button class="btn btn-sm" id="accUpload">上传云存档</button><button class="btn btn-sm" id="accLogout">登出</button><button class="btn btn-sm" id="mbClose">关闭</button></div>';
+  var h='<div class="modal-name">'+String.fromCharCode(36080,21495)+'</div><div class="modal-scroll">';
+  h+='<div style="padding:12px 0;font-size:14px;color:#555">'+String.fromCharCode(36080,21495,65306)+'<span style="font-weight:600">'+loggedInAccount+'</span></div>';
+  h+='<div class="modal-btns"><button class="btn btn-sm" id="accUpload">'+String.fromCharCode(19978,20256,20113,23384,26723)+'</button><button class="btn btn-sm" id="accLogout">'+String.fromCharCode(30331,20986)+'</button><button class="btn btn-sm" id="mbClose">'+String.fromCharCode(20851,38381)+'</button></div>';
   h+='</div>';
   $modalBox.innerHTML=h;$modalOverlay.classList.add('show');
   document.getElementById('mbClose').addEventListener('click',closeModal);
-  document.getElementById('accUpload').addEventListener('click',function(){uploadCloudSave(function(ok){showTip(ok?'上传成功':'上传失败');});});
+  document.getElementById('accUpload').addEventListener('click',function(){showTip(String.fromCharCode(19978,20256,20013)+'...');uploadCloudSave(function(ok){showTip(ok?String.fromCharCode(19978,20256,25104,21151):String.fromCharCode(19978,20256,22833,36133));});});
   document.getElementById('accLogout').addEventListener('click',doLogout);
 }
 
 function doLogin(){
   var user=document.getElementById('accUser').value.trim();
   var pass=document.getElementById('accPass').value;
-  if(!user||!pass){showTip('请输入账号和密码');return;}
-  getAccountFile(user,function(err,data){
-    if(err||!data){showFloatTip(document.getElementById('accLogin'),'账号或密码不正确',1000);return;}
-    if(data.password!==pass){showFloatTip(document.getElementById('accLogin'),'账号或密码不正确',1000);return;}
+  if(!user||!pass){showTip(String.fromCharCode(35831,36755,20837,36080,21495,21644,23494,30721));return;}
+  showTip(String.fromCharCode(30331,24405,20013)+'...');
+  loadGistData(function(err,data){
+    if(err){showTip(String.fromCharCode(32593,32476,38169,35823,65292,35831,37325,35797));return;}
+    if(!data[user]){showTip(String.fromCharCode(36080,21495,25110,23494,30721,19981,27491,30830));return;}
+    if(data[user].password!==pass){showTip(String.fromCharCode(36080,21495,25110,23494,30721,19981,27491,30830));return;}
     loggedInAccount=user;
     try{localStorage.setItem('loggedInAccount',user);}catch(e){}
     closeModal();
-    showFloatTip(document.body,'登录成功',3000);
+    showFloatTip(document.body,String.fromCharCode(30331,24405,25104,21151),3000);
     checkCloudSave();
     startAutoUpload();
   });
@@ -139,29 +138,25 @@ function doRegister(){
   var user=document.getElementById('regUser').value.trim();
   var pass=document.getElementById('regPass').value;
   var pass2=document.getElementById('regPass2').value;
-  if(!isValidAccount(user)){showTip('账号仅支持数字或英文，3-20字符');return;}
-  if(!isValidPassword(pass)){showTip('密码仅支持数字、英文和英文标点，4-20字符');return;}
-  if(pass!==pass2){showTip('两次密码不一致');return;}
-  getDeviceReg(function(err,devReg,sha){
-    if(err){showTip('注册失败，请重试');return;}
-    if(!devReg)devReg={};
-    if(devReg[deviceCode]){showTip('此设备已注册过账号');return;}
-    getAccountFile(user,function(err2,data){
-      if(data){showTip('该账号已被注册');return;}
-      var accountData={password:pass,deviceCode:deviceCode,createdAt:Date.now()};
-      saveAccountFile(user,accountData,null,function(err3,newSha){
-        if(err3){showTip('注册失败，请重试');return;}
-        devReg[deviceCode]=user;
-        saveDeviceReg(devReg,sha,function(err4){
-          if(err4){showTip('注册失败，请重试');return;}
-          loggedInAccount=user;
-          try{localStorage.setItem('loggedInAccount',user);}catch(e){}
-          closeModal();
-          showFloatTip(document.body,'注册成功，已自动登录',3000);
-          uploadCloudSave(function(ok){if(ok)showFloatTip(document.body,'云存档已上传',2000);});
-          startAutoUpload();
-        });
-      });
+  if(!isValidAccount(user)){showTip(String.fromCharCode(36080,21495,20165,25903,25345,25968,23383,25110,33529,25991,65292,51,45,50,48,23383,31526));return;}
+  if(!isValidPassword(pass)){showTip(String.fromCharCode(23494,30721,20165,25903,25345,25968,25968,23383,12289,33529,25991,21644,33529,25991,26631,28857,65292,52,45,50,48,23383,31526));return;}
+  if(pass!==pass2){showTip(String.fromCharCode(20004,27425,23494,30721,19981,19968,33268));return;}
+  showTip(String.fromCharCode(27880,20876,20013)+'...');
+  loadGistData(function(err,data){
+    if(err){showTip(String.fromCharCode(32593,32476,38169,35823,65292,35831,37325,35797));return;}
+    if(!data.devices)data.devices={};
+    if(data.devices[deviceCode]){showTip(String.fromCharCode(27492,35774,22791,24050,27880,20876,36807,36080,21495));return;}
+    if(data[user]){showTip(String.fromCharCode(35813,36080,21495,24050,34987,27880,20876));return;}
+    data[user]={password:pass,deviceCode:deviceCode,createdAt:Date.now()};
+    data.devices[deviceCode]=user;
+    saveGistData(data,function(err2){
+      if(err2){showTip(String.fromCharCode(27880,20876,22833,36133,65292,35831,37325,35797));return;}
+      loggedInAccount=user;
+      try{localStorage.setItem('loggedInAccount',user);}catch(e){}
+      closeModal();
+      showFloatTip(document.body,String.fromCharCode(27880,20876,25104,21151,65292,24050,33258,21160,30331,24405),3000);
+      uploadCloudSave(function(ok){if(ok)showFloatTip(document.body,String.fromCharCode(20113,23384,26723,24050,19978,20256),2000);});
+      startAutoUpload();
     });
   });
 }
@@ -171,42 +166,40 @@ function doLogout(){
   try{localStorage.removeItem('loggedInAccount');}catch(e){}
   if(autoUploadTimer){clearInterval(autoUploadTimer);autoUploadTimer=null;}
   closeModal();
-  showFloatTip(document.body,'已登出',2000);
+  showFloatTip(document.body,String.fromCharCode(24050,30331,20986),2000);
 }
 
 function uploadCloudSave(cb){
   if(!loggedInAccount){if(cb)cb(false);return;}
   var saveData=localStorage.getItem('xiImmortalSave');
   if(!saveData){if(cb)cb(false);return;}
-  getAccountFile(loggedInAccount,function(err,data,sha){
-    if(err||!data){if(cb)cb(false);return;}
-    data.save=saveData;
-    data.lastUpload=Date.now();
-    saveAccountFile(loggedInAccount,data,sha,function(err2){
-      if(cb)cb(!err2);
-    });
+  loadGistData(function(err,data){
+    if(err||!data||!data[loggedInAccount]){if(cb)cb(false);return;}
+    data[loggedInAccount].save=saveData;
+    data[loggedInAccount].lastUpload=Date.now();
+    saveGistData(data,function(err2){if(cb)cb(!err2);});
   });
 }
 
 function downloadCloudSave(cb){
   if(!loggedInAccount){if(cb)cb(false);return;}
-  getAccountFile(loggedInAccount,function(err,data){
-    if(err||!data||!data.save){if(cb)cb(false);return;}
-    try{localStorage.setItem('xiImmortalSave',data.save);if(cb)cb(true);}catch(e){if(cb)cb(false);}
+  loadGistData(function(err,data){
+    if(err||!data||!data[loggedInAccount]||!data[loggedInAccount].save){if(cb)cb(false);return;}
+    try{localStorage.setItem('xiImmortalSave',data[loggedInAccount].save);if(cb)cb(true);}catch(e){if(cb)cb(false);}
   });
 }
 
 function checkCloudSave(){
   if(!loggedInAccount)return;
-  getAccountFile(loggedInAccount,function(err,data){
-    if(err||!data)return;
-    if(data.save){
-      var h='<div class="modal-name">云存档</div><div class="modal-scroll">';
-      h+='<div style="font-size:14px;color:#555;padding:12px 0">检测到账号云存档，是否下载覆盖本地存档？</div>';
-      h+='<div class="modal-btns"><button class="btn btn-sm" id="accDownload">下载</button><button class="btn btn-sm" id="accSkip">跳过</button></div>';
+  loadGistData(function(err,data){
+    if(err||!data||!data[loggedInAccount])return;
+    if(data[loggedInAccount].save){
+      var h='<div class="modal-name">'+String.fromCharCode(20113,23384,26723)+'</div><div class="modal-scroll">';
+      h+='<div style="font-size:14px;color:#555;padding:12px 0">'+String.fromCharCode(26816,27979,21040,36080,21495,20113,23384,26723,65292,26159,21542,19979,36733,35206,30422,26412,22320,23384,26723,65311)+'</div>';
+      h+='<div class="modal-btns"><button class="btn btn-sm" id="accDownload">'+String.fromCharCode(19979,36733)+'</button><button class="btn btn-sm" id="accSkip">'+String.fromCharCode(36339,36807)+'</button></div>';
       h+='</div>';
       $modalBox.innerHTML=h;$modalOverlay.classList.add('show');
-      document.getElementById('accDownload').addEventListener('click',function(){downloadCloudSave(function(ok){closeModal();if(ok){showFloatTip(document.body,'云存档已下载',2000);location.reload();}else{showTip('下载失败');}});});
+      document.getElementById('accDownload').addEventListener('click',function(){downloadCloudSave(function(ok){closeModal();if(ok){showFloatTip(document.body,String.fromCharCode(20113,23384,26723,24050,19979,36733),2000);location.reload();}else{showTip(String.fromCharCode(19979,36733,22833,36133));}});});
       document.getElementById('accSkip').addEventListener('click',function(){closeModal();});
     }
   });
@@ -218,7 +211,6 @@ function startAutoUpload(){
     if(loggedInAccount)uploadCloudSave(function(ok){});
   },5*60*1000);
 }
-
 // Restore login state
 function restoreLogin(){
   initDeviceCode();
