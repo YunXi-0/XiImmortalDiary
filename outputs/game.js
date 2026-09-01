@@ -28,21 +28,21 @@ function isValidPassword(p){var re=/^[a-zA-Z0-9!@#$%^&*()_+\-=\[\]{}|;:',.\/?~ ]
 function loadGistData(cb){
   var now=Date.now();
   if(gistCache&&now-gistCacheTime<5000){cb(null,gistCache);return;}
-  var rawUrl='https://raw.githubusercontent.com/'+REPO_OWNER+'/'+REPO_NAME+'/main/'+DATA_PATH+'?t='+now;
+  var apiUrl='https://api.github.com/repos/'+REPO_OWNER+'/'+REPO_NAME+'/contents/'+DATA_PATH+'?t='+now;
   if(isAndroid){
-    var result=AndroidBridge.httpGetRaw(rawUrl);
+    var result=AndroidBridge.httpGet(apiUrl);
     if(result){
       var sep=result.indexOf('|');
       var code=parseInt(result.substring(0,sep));
       var body=result.substring(sep+1);
       if(code===200){
-        try{var data=JSON.parse(body);gistCache=data;gistCacheTime=now;cb(null,data);}
+        try{var r=JSON.parse(body);var content=atob(r.content);var data=JSON.parse(content);gistCache=data;gistCacheTime=now;cb(null,data);}
         catch(e){cb(e);}
       }else{cb('status:'+code);}
     }else{cb('no result');}
   }else{
     var xhr=new XMLHttpRequest();
-    xhr.open('GET',rawUrl,true);
+    xhr.open('GET',apiUrl,true);
     xhr.timeout=10000;
     xhr.onload=function(){
       if(xhr.status===200){
