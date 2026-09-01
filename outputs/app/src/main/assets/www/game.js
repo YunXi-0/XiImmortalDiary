@@ -1,259 +1,246 @@
 var APP_VERSION='0.2.3';
 var SAVE_KEY='xiImmortalSave',SAVE_VER=4;
-function saveGame(){var d={v:SAVE_VER,sI:stageIdx,exp:exp,cop:copper,pHP:playerHP,pMHP:playerMaxHP,bp:backpack,wh:warehouse,mk:monsterKills,cO:containerOwned,cFO:containerFemaleOwned,cKB:containerKillBase,cFKB:containerFemaleKillBase,cs:craftStats,bHP:bonusHP,bATK:bonusATK,bDEF:bonusDEF,bLS:bonusLifesteal,bC:bonusCrit,bCD:bonusCritDmg,bDo:bonusDodge,bHi:bonusHit,bDR:bonusDefRat,bAR:bonusAtkRat,bDS:bonusDefSmith,bAZ:bonusAtkZaiA,bAB:bonusAtkBig,bAS:bonusAtkSnake,bHS:bonusHitSpider,bDC:bonusDodgeCentipede,bAB2:bonusAtkBoar,eq:equipment,sh:shopSlots,sr:shopRefreshAt,lt:lastTravelDest,cl:craftLevels,sL:{gc:shopLevel.gridCount,rl:shopLevel.rareLevel},sk:skills,me:mapExp,en:enchanted,vk:variantKills,sr:specialRealm,ss:specialStage,cs2:completedSpecials,spb:specialPctBonus,tge:trueGrassEssenceObtained,st:stance,sP:stanceProficiency,cLv:cultLv,cExp:cultExp,tAL:tempArrayLv,bT:bodyTrain,bTHP:bodyTrainBonusHP,bTATK:bodyTrainBonusATK,bTDEF:bodyTrainBonusDEF,cBHP:cultBonusHP,cBATK:cultBonusATK,cBDEF:cultBonusDEF,uR:unlockedRecipes,fac:facilities,evtC:eventChance,uF:unlockedFacilities,tLv:travelLv,tExp:travelExp};try{localStorage.setItem(SAVE_KEY,JSON.stringify(d));}catch(e){}}
+function saveGame(){var d={v:SAVE_VER,sI:stageIdx,exp:exp,cop:copper,pHP:playerHP,pMHP:playerMaxHP,bp:backpack,wh:warehouse,mk:monsterKills,cO:containerOwned,cFO:containerFemaleOwned,cKB:containerKillBase,cFKB:containerFemaleKillBase,cs:craftStats,bHP:bonusHP,bATK:bonusATK,bDEF:bonusDEF,bLS:bonusLifesteal,bC:bonusCrit,bCD:bonusCritDmg,bDo:bonusDodge,bHi:bonusHit,bDR:bonusDefRat,bAR:bonusAtkRat,bDS:bonusDefSmith,bAZ:bonusAtkZaiA,bAB:bonusAtkBig,bAS:bonusAtkSnake,bHS:bonusHitSpider,bDC:bonusDodgeCentipede,bAB2:bonusAtkBoar,eq:equipment,sh:shopSlots,sr:shopRefreshAt,lt:lastTravelDest,cl:craftLevels,sL:{gc:shopLevel.gridCount,rl:shopLevel.rareLevel},sk:skills,me:mapExp,en:enchanted,vk:variantKills,sr:specialRealm,ss:specialStage,cs2:completedSpecials,spb:specialPctBonus,tge:trueGrassEssenceObtained,st:stance,sP:stanceProficiency,cLv:cultLv,cExp:cultExp,tAL:tempArrayLv,bT:bodyTrain,bTHP:bodyTrainBonusHP,bTATK:bodyTrainBonusATK,bTDEF:bodyTrainBonusDEF,cBHP:cultBonusHP,cBATK:cultBonusATK,cBDEF:cultBonusDEF,uR:unlockedRecipes,fac:facilities,evtC:eventChance,uF:unlockedFacilities,tLv:travelLv,tExp:travelExp};try{localStorage.setItem(SAVE_KEY,JSON.stringify(d));}catch(ex){}}
 
-// ========== Account System (GitHub Contents API) ==========
-var REPO_OWNER='YunXi-0';
-var REPO_NAME='XiImmortalDiary';
-var DATA_PATH='data/accounts.json';
-var loggedInAccount=null;
-var autoUploadTimer=null;
+// ========== Account System (kvdb.io) ==========
+var KVDB_BUCKET='A2vqsiB5juK3mX6H9urPed';
+var KVDB_BASE='https://kvdb.io/'+KVDB_BUCKET;
+var currentUser=null;
 var deviceCode=null;
-var gistCache=null;
-var gistCacheTime=0;
-var GIST_TOKEN=(typeof AndroidBridge!=='undefined'&&AndroidBridge.getToken)?AndroidBridge.getToken():'';
-var isAndroid=(typeof AndroidBridge!=='undefined');
+var autoUploadTimer=null;
 
 function initDeviceCode(){
-  if(deviceCode)return;
-  var stored=null;
-  try{stored=localStorage.getItem('deviceCode');}catch(e){}
-  if(stored){deviceCode=stored;return;}
-  deviceCode='DEV-'+Date.now()+'-'+Math.random().toString(36).substring(2,10);
-  try{localStorage.setItem('deviceCode',deviceCode);}catch(e){}
+  var dc=localStorage.getItem('xiDeviceCode');
+  if(!dc){dc='dev_'+Date.now()+'_'+Math.random().toString(36).substr(2,9);localStorage.setItem('xiDeviceCode',dc);}
+  deviceCode=dc;
 }
 
-function isValidAccount(a){return /^[a-zA-Z0-9]+$/.test(a)&&a.length>=3&&a.length<=20;}
-function isValidPassword(p){var re=/^[a-zA-Z0-9!@#$%^&*()_+\-=\[\]{}|;:',.\/?~ ]+$/;return re.test(p)&&p.length>=4&&p.length<=20;}
-function loadGistData(cb){
-  var now=Date.now();
-  if(gistCache&&now-gistCacheTime<5000){cb(null,gistCache);return;}
-  var apiUrl='https://api.github.com/repos/'+REPO_OWNER+'/'+REPO_NAME+'/contents/'+DATA_PATH+'?t='+now;
-  if(isAndroid){
-    var result=AndroidBridge.httpGet(apiUrl);
-    if(result){
-      var sep=result.indexOf('|');
-      var code=parseInt(result.substring(0,sep));
-      var body=result.substring(sep+1);
-      if(code===200){
-        try{var r=JSON.parse(body);var content=atob(r.content);var data=JSON.parse(content);gistCache=data;gistCacheTime=now;cb(null,data);}
-        catch(e){cb(e);}
-      }else{cb('status:'+code);}
-    }else{cb('no result');}
-  }else{
-    var xhr=new XMLHttpRequest();
-    xhr.open('GET',apiUrl,true);
-    xhr.timeout=10000;
-    xhr.onload=function(){
-      if(xhr.status===200){
-        try{var data=JSON.parse(xhr.responseText);gistCache=data;gistCacheTime=now;cb(null,data);}
-        catch(e){cb(e);}
-      }else{cb('status:'+xhr.status);}
-    };
-    xhr.onerror=function(){cb('network error');};
-    xhr.ontimeout=function(){cb('timeout');};
-    xhr.send();
-  }
+function isValidAccount(u){return u&&u.length>=3&&u.length<=20&&/^[a-zA-Z0-9_]+$/.test(u);}
+function isValidPassword(p){return p&&p.length>=4&&p.length<=30;}
+
+function loadAccounts(cb){
+  var xhr=new XMLHttpRequest();
+  xhr.open('GET',KVDB_BASE+'/accounts',true);
+  xhr.onload=function(){if(xhr.status===200){try{var d=JSON.parse(xhr.responseText);cb(null,d||{});}catch(ex){cb(null,{});}}else{cb(null,{});}};
+  xhr.onerror=function(){cb(null,{});};
+  xhr.send();
 }
 
-function saveGistData(data,cb){
-  var getUrl='https://api.github.com/repos/'+REPO_OWNER+'/'+REPO_NAME+'/contents/'+DATA_PATH;
-  if(isAndroid){
-    var getResult=AndroidBridge.httpGet(getUrl);
-    var sha=null;
-    if(getResult){
-      var sep=getResult.indexOf('|');
-      var code=parseInt(getResult.substring(0,sep));
-      var body=getResult.substring(sep+1);
-      if(code===200){try{sha=JSON.parse(body).sha;}catch(e){}}
-    }
-    var content=btoa(unescape(encodeURIComponent(JSON.stringify(data))));
-    var putBody=JSON.stringify({message:'update accounts',content:content,sha:sha});
-    var putResult=AndroidBridge.httpPut(getUrl,putBody);
-    if(putResult){
-      var sep2=putResult.indexOf('|');
-      var putCode=parseInt(putResult.substring(0,sep2));
-      if(putCode===200||putCode===201){try{gistCache=data;gistCacheTime=Date.now();}catch(e){}cb(null);}
-      else{cb('status:'+putCode);}
-    }else{cb('no result');}
-  }else{
-    if(!GIST_TOKEN){cb('no token');return;}
-    var getxhr=new XMLHttpRequest();
-    getxhr.open('GET',getUrl,true);
-    getxhr.setRequestHeader('Authorization','token '+GIST_TOKEN);
-    getxhr.timeout=10000;
-    getxhr.onload=function(){
-      var sha=null;
-      if(getxhr.status===200){try{sha=JSON.parse(getxhr.responseText).sha;}catch(e){}}
-      var body=JSON.stringify({message:'update accounts',content:btoa(unescape(encodeURIComponent(JSON.stringify(data)))),sha:sha});
-      var putxhr=new XMLHttpRequest();
-      putxhr.open('PUT',getUrl,true);
-      putxhr.setRequestHeader('Authorization','token '+GIST_TOKEN);
-      putxhr.setRequestHeader('Content-Type','application/json');
-      putxhr.timeout=10000;
-      putxhr.onload=function(){
-        if(putxhr.status===200||putxhr.status===201){try{gistCache=data;gistCacheTime=Date.now();}catch(e){}cb(null);}
-        else{cb('status:'+putxhr.status);}
-      };
-      putxhr.onerror=function(){cb('network error');};
-      putxhr.ontimeout=function(){cb('timeout');};
-      putxhr.send(body);
-    };
-    getxhr.onerror=function(){cb('network error');};
-    getxhr.ontimeout=function(){cb('timeout');};
-    getxhr.send();
-  }
+function saveAccounts(data,cb){
+  var xhr=new XMLHttpRequest();
+  xhr.open('POST',KVDB_BASE+'/accounts',true);
+  xhr.setRequestHeader('Content-Type','application/json');
+  xhr.onload=function(){if(cb)cb(null);};
+  xhr.onerror=function(){if(cb)cb(new Error('Network error'));};
+  xhr.send(JSON.stringify(data));
+}
+
+function loadDevices(cb){
+  var xhr=new XMLHttpRequest();
+  xhr.open('GET',KVDB_BASE+'/devices',true);
+  xhr.onload=function(){if(xhr.status===200){try{var d=JSON.parse(xhr.responseText);cb(null,d||{});}catch(ex){cb(null,{});}}else{cb(null,{});}};
+  xhr.onerror=function(){cb(null,{});};
+  xhr.send();
+}
+
+function saveDevices(data,cb){
+  var xhr=new XMLHttpRequest();
+  xhr.open('POST',KVDB_BASE+'/devices',true);
+  xhr.setRequestHeader('Content-Type','application/json');
+  xhr.onload=function(){if(cb)cb(null);};
+  xhr.onerror=function(){if(cb)cb(new Error('Network error'));};
+  xhr.send(JSON.stringify(data));
 }
 
 function showAccountModal(){
-  initDeviceCode();
-  if(loggedInAccount){showLoggedInModal();}else{showLoginModal();}
+  var html='<div style="text-align:center;padding:20px">';
+  html+='<h2>'+String.fromCharCode(24080,25143,31995,32479)+'</h2>';
+  html+='<p>'+String.fromCharCode(24744,30340,35774,22791,30721)+': '+deviceCode+'</p>';
+  html+='<button id="btnAccountLogin" style="margin:5px;padding:8px 16px">'+String.fromCharCode(30331,24405)+'</button>';
+  html+='<button id="btnAccountRegister" style="margin:5px;padding:8px 16px">'+String.fromCharCode(27880,20876)+'</button>';
+  html+='<button id="btnAccountCancel" style="margin:5px;padding:8px 16px">'+String.fromCharCode(21462,28040)+'</button>';
+  html+='</div>';
+  $modalOverlay.style.display='flex';
+  $modalBox.innerHTML=html;
+  document.getElementById('btnAccountLogin').addEventListener('click',function(){showLoginModal();});
+  document.getElementById('btnAccountRegister').addEventListener('click',function(){showRegisterModal();});
+  document.getElementById('btnAccountCancel').addEventListener('click',function(){$modalOverlay.style.display='none';});
 }
 
 function showLoginModal(){
-  var h='<div class="modal-name">'+String.fromCharCode(36080,21495)+'</div><div class="modal-scroll">';
-  h+='<div style="margin:8px 0"><input id="accUser" type="text" placeholder="'+String.fromCharCode(36080,21495,65288,25968,23383,25110,33529,25991,65289)+'" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:4px;font-size:14px"></div>';
-  h+='<div style="margin:8px 0"><input id="accPass" type="password" placeholder="'+String.fromCharCode(23494,30721)+'" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:4px;font-size:14px"></div>';
-  h+='<div class="modal-btns"><button class="btn btn-sm" id="accLogin">'+String.fromCharCode(30331,24405)+'</button><button class="btn btn-sm" id="accRegister">'+String.fromCharCode(27880,20876)+'</button><button class="btn btn-sm" id="mbClose">'+String.fromCharCode(21462,28040)+'</button></div>';
-  h+='</div>';
-  $modalBox.innerHTML=h;$modalOverlay.classList.add('show');
-  document.getElementById('mbClose').addEventListener('click',closeModal);
-  document.getElementById('accLogin').addEventListener('click',doLogin);
-  document.getElementById('accRegister').addEventListener('click',showRegisterModal);
+  var html='<div style="text-align:center;padding:20px">';
+  html+='<h2>'+String.fromCharCode(30331,24405)+'</h2>';
+  html+='<div style="margin:10px 0"><input id="loginUser" placeholder="'+String.fromCharCode(29992,25143,21517)+'" style="padding:6px;width:200px"></div>';
+  html+='<div style="margin:10px 0"><input id="loginPass" type="password" placeholder="'+String.fromCharCode(23494,30721)+'" style="padding:6px;width:200px"></div>';
+  html+='<div id="loginError" style="color:red;min-height:20px"></div>';
+  html+='<button id="btnDoLogin" style="margin:5px;padding:8px 16px">'+String.fromCharCode(30331,24405)+'</button>';
+  html+='<button id="btnLoginBack" style="margin:5px;padding:8px 16px">'+String.fromCharCode(36820,22238)+'</button>';
+  html+='</div>';
+  $modalOverlay.style.display='flex';
+  $modalBox.innerHTML=html;
+  document.getElementById('btnDoLogin').addEventListener('click',function(){doLogin();});
+  document.getElementById('btnLoginBack').addEventListener('click',function(){showAccountModal();});
 }
 
 function showRegisterModal(){
-  var h='<div class="modal-name">'+String.fromCharCode(27880,20876)+'</div><div class="modal-scroll">';
-  h+='<div style="margin:8px 0"><input id="regUser" type="text" placeholder="'+String.fromCharCode(36080,21495,65288,20165,25968,23383,25110,33529,25991,65292,51,45,50,48,23383,31526,65289)+'" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:4px;font-size:14px"></div>';
-  h+='<div style="margin:8px 0"><input id="regPass" type="password" placeholder="'+String.fromCharCode(23494,30721,65288,52,45,50,48,23383,31526,65289)+'" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:4px;font-size:14px"></div>';
-  h+='<div style="margin:8px 0"><input id="regPass2" type="password" placeholder="'+String.fromCharCode(30830,35748,23494,30721)+'" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:4px;font-size:14px"></div>';
-  h+='<div class="modal-btns"><button class="btn btn-sm" id="accRegConfirm">'+String.fromCharCode(27880,20876)+'</button><button class="btn btn-sm" id="accRegCancel">'+String.fromCharCode(21462,28040)+'</button></div>';
-  h+='</div>';
-  $modalBox.innerHTML=h;$modalOverlay.classList.add('show');
-  document.getElementById('accRegCancel').addEventListener('click',showLoginModal);
-  document.getElementById('accRegConfirm').addEventListener('click',doRegister);
+  var html='<div style="text-align:center;padding:20px">';
+  html+='<h2>'+String.fromCharCode(27880,20876)+'</h2>';
+  html+='<div style="margin:10px 0"><input id="regUser" placeholder="'+String.fromCharCode(29992,25143,21517)+'" style="padding:6px;width:200px"></div>';
+  html+='<div style="margin:10px 0"><input id="regPass" type="password" placeholder="'+String.fromCharCode(23494,30721)+'" style="padding:6px;width:200px"></div>';
+  html+='<div style="margin:10px 0"><input id="regPass2" type="password" placeholder="'+String.fromCharCode(30830,35748,23494,30721)+'" style="padding:6px;width:200px"></div>';
+  html+='<div id="regError" style="color:red;min-height:20px"></div>';
+  html+='<button id="btnDoRegister" style="margin:5px;padding:8px 16px">'+String.fromCharCode(27880,20876)+'</button>';
+  html+='<button id="btnRegBack" style="margin:5px;padding:8px 16px">'+String.fromCharCode(36820,22238)+'</button>';
+  html+='</div>';
+  $modalOverlay.style.display='flex';
+  $modalBox.innerHTML=html;
+  document.getElementById('btnDoRegister').addEventListener('click',function(){doRegister();});
+  document.getElementById('btnRegBack').addEventListener('click',function(){showAccountModal();});
 }
 
 function showLoggedInModal(){
-  var h='<div class="modal-name">'+String.fromCharCode(36080,21495)+'</div><div class="modal-scroll">';
-  h+='<div style="padding:12px 0;font-size:14px;color:#555">'+String.fromCharCode(36080,21495,65306)+'<span style="font-weight:600">'+loggedInAccount+'</span></div>';
-  h+='<div class="modal-btns"><button class="btn btn-sm" id="accUpload">'+String.fromCharCode(19978,20256,20113,23384,26723)+'</button><button class="btn btn-sm" id="accLogout">'+String.fromCharCode(30331,20986)+'</button><button class="btn btn-sm" id="mbClose">'+String.fromCharCode(20851,38381)+'</button></div>';
-  h+='</div>';
-  $modalBox.innerHTML=h;$modalOverlay.classList.add('show');
-  document.getElementById('mbClose').addEventListener('click',closeModal);
-  document.getElementById('accUpload').addEventListener('click',function(){showTip(String.fromCharCode(19978,20256,20013)+'...');uploadCloudSave(function(ok){showTip(ok?String.fromCharCode(19978,20256,25104,21151):String.fromCharCode(19978,20256,22833,36133));});});
-  document.getElementById('accLogout').addEventListener('click',doLogout);
+  var html='<div style="text-align:center;padding:20px">';
+  html+='<h2>'+String.fromCharCode(24080,25143,20449,24687)+'</h2>';
+  html+='<p>'+String.fromCharCode(24403,21069,29992,25143)+': '+currentUser+'</p>';
+  html+='<button id="btnUploadSave" style="margin:5px;padding:8px 16px">'+String.fromCharCode(19978,20256,23384,26723)+'</button>';
+  html+='<button id="btnDownloadSave" style="margin:5px;padding:8px 16px">'+String.fromCharCode(19979,36733,23384,26723)+'</button>';
+  html+='<button id="btnLogout" style="margin:5px;padding:8px 16px">'+String.fromCharCode(30331,20986)+'</button>';
+  html+='<button id="btnLoggedInClose" style="margin:5px;padding:8px 16px">'+String.fromCharCode(20851,38381)+'</button>';
+  html+='</div>';
+  $modalOverlay.style.display='flex';
+  $modalBox.innerHTML=html;
+  document.getElementById('btnUploadSave').addEventListener('click',function(){uploadCloudSave(function(err){if(err)alert(String.fromCharCode(19978,20256,22833,36133)+': '+err.message);else alert(String.fromCharCode(19978,20256,25104,21151));});});
+  document.getElementById('btnDownloadSave').addEventListener('click',function(){downloadCloudSave(function(err){if(err)alert(String.fromCharCode(19979,36733,22833,36133)+': '+err.message);else{loadGame();refreshMaxHP();renderMain();renderDestList();renderTravelLower();renderStorage();ensureShop();renderCraft();renderBodyTrain();renderInfo();alert(String.fromCharCode(19979,36733,25104,21151));}});});
+  document.getElementById('btnLogout').addEventListener('click',function(){doLogout();});
+  document.getElementById('btnLoggedInClose').addEventListener('click',function(){$modalOverlay.style.display='none';});
 }
 
 function doLogin(){
-  var user=document.getElementById('accUser').value.trim();
-  var pass=document.getElementById('accPass').value;
-  if(!user||!pass){showTip(String.fromCharCode(35831,36755,20837,36080,21495,21644,23494,30721));return;}
-  showTip(String.fromCharCode(30331,24405,20013)+'...');
-  loadGistData(function(err,data){
-    if(err){showTip(String.fromCharCode(32593,32476,38169,35823,65292,35831,37325,35797));return;}
-    if(!data[user]){showTip(String.fromCharCode(36080,21495,25110,23494,30721,19981,27491,30830));return;}
-    if(data[user].password!==pass){showTip(String.fromCharCode(36080,21495,25110,23494,30721,19981,27491,30830));return;}
-    loggedInAccount=user;
-    try{localStorage.setItem('loggedInAccount',user);}catch(e){}
-    closeModal();
-    showFloatTip(document.body,String.fromCharCode(30331,24405,25104,21151),3000);
+  var u=document.getElementById('loginUser').value.trim();
+  var p=document.getElementById('loginPass').value;
+  var errEl=document.getElementById('loginError');
+  if(!isValidAccount(u)){errEl.textContent=String.fromCharCode(29992,25143,21517,26684,24335,19981,27491,30830);return;}
+  if(!isValidPassword(p)){errEl.textContent=String.fromCharCode(23494,30721,38271,24230,19981,36275);return;}
+  loadAccounts(function(err,accounts){
+    if(err){errEl.textContent=String.fromCharCode(32593,32476,38169,35823);return;}
+    if(!accounts[u]){errEl.textContent=String.fromCharCode(29992,25143,21517,25110,23494,30721,38169,35823);return;}
+    if(accounts[u].password!==p){errEl.textContent=String.fromCharCode(29992,25143,21517,25110,23494,30721,38169,35823);return;}
+    currentUser=u;
+    localStorage.setItem('xiCurrentUser',u);
+    loadDevices(function(err2,devices){
+      if(!err2){devices[deviceCode]=u;saveDevices(devices);}
+    });
+    $modalOverlay.style.display='none';
     checkCloudSave();
     startAutoUpload();
   });
 }
 
 function doRegister(){
-  var user=document.getElementById('regUser').value.trim();
-  var pass=document.getElementById('regPass').value;
-  var pass2=document.getElementById('regPass2').value;
-  if(!isValidAccount(user)){showTip(String.fromCharCode(36080,21495,20165,25903,25345,25968,23383,25110,33529,25991,65292,51,45,50,48,23383,31526));return;}
-  if(!isValidPassword(pass)){showTip(String.fromCharCode(23494,30721,20165,25903,25345,25968,25968,23383,12289,33529,25991,21644,33529,25991,26631,28857,65292,52,45,50,48,23383,31526));return;}
-  if(pass!==pass2){showTip(String.fromCharCode(20004,27425,23494,30721,19981,19968,33268));return;}
-  showTip(String.fromCharCode(27880,20876,20013)+'...');
-  loadGistData(function(err,data){
-    if(err){showTip(String.fromCharCode(32593,32476,38169,35823,65292,35831,37325,35797));return;}
-    if(!data.devices)data.devices={};
-    if(data.devices[deviceCode]){showTip(String.fromCharCode(27492,35774,22791,24050,27880,20876,36807,36080,21495));return;}
-    if(data[user]){showTip(String.fromCharCode(35813,36080,21495,24050,34987,27880,20876));return;}
-    data[user]={password:pass,deviceCode:deviceCode,createdAt:Date.now()};
-    data.devices[deviceCode]=user;
-    saveGistData(data,function(err2){
-      if(err2){showTip(String.fromCharCode(27880,20876,22833,36133,65292,35831,37325,35797));return;}
-      loggedInAccount=user;
-      try{localStorage.setItem('loggedInAccount',user);}catch(e){}
-      closeModal();
-      showFloatTip(document.body,String.fromCharCode(27880,20876,25104,21151,65292,24050,33258,21160,30331,24405),3000);
-      uploadCloudSave(function(ok){if(ok)showFloatTip(document.body,String.fromCharCode(20113,23384,26723,24050,19978,20256),2000);});
+  var u=document.getElementById('regUser').value.trim();
+  var p=document.getElementById('regPass').value;
+  var p2=document.getElementById('regPass2').value;
+  var errEl=document.getElementById('regError');
+  if(!isValidAccount(u)){errEl.textContent=String.fromCharCode(29992,25143,21517,26684,24335,19981,27491,30830);return;}
+  if(!isValidPassword(p)){errEl.textContent=String.fromCharCode(23494,30721,38271,24230,19981,36275);return;}
+  if(p!==p2){errEl.textContent=String.fromCharCode(20004,27425,23494,30721,19981,19968,33268);return;}
+  loadAccounts(function(err,accounts){
+    if(err){errEl.textContent=String.fromCharCode(32593,32476,38169,35823);return;}
+    if(accounts[u]){errEl.textContent=String.fromCharCode(29992,25143,21517,24050,23384,22312);return;}
+    accounts[u]={password:p,deviceCode:deviceCode,createdAt:Date.now()};
+    saveAccounts(accounts,function(err2){
+      if(err2){errEl.textContent=String.fromCharCode(32593,32476,38169,35823);return;}
+      currentUser=u;
+      localStorage.setItem('xiCurrentUser',u);
+      loadDevices(function(err3,devices){
+        if(!err3){devices[deviceCode]=u;saveDevices(devices);}
+      });
+      $modalOverlay.style.display='none';
       startAutoUpload();
     });
   });
 }
 
 function doLogout(){
-  loggedInAccount=null;
-  try{localStorage.removeItem('loggedInAccount');}catch(e){}
+  currentUser=null;
+  localStorage.removeItem('xiCurrentUser');
+  loadDevices(function(err,devices){
+    if(!err&&devices[deviceCode]){delete devices[deviceCode];saveDevices(devices);}
+  });
   if(autoUploadTimer){clearInterval(autoUploadTimer);autoUploadTimer=null;}
-  closeModal();
-  showFloatTip(document.body,String.fromCharCode(24050,30331,20986),2000);
+  $modalOverlay.style.display='none';
 }
 
 function uploadCloudSave(cb){
-  if(!loggedInAccount){if(cb)cb(false);return;}
-  var saveData=localStorage.getItem('xiImmortalSave');
-  if(!saveData){if(cb)cb(false);return;}
-  loadGistData(function(err,data){
-    if(err||!data||!data[loggedInAccount]){if(cb)cb(false);return;}
-    data[loggedInAccount].save=saveData;
-    data[loggedInAccount].lastUpload=Date.now();
-    saveGistData(data,function(err2){if(cb)cb(!err2);});
-  });
+  if(!currentUser){if(cb)cb(new Error(String.fromCharCode(26410,30331,24405)));return;}
+  var data=localStorage.getItem(SAVE_KEY);
+  if(!data){if(cb)cb(new Error(String.fromCharCode(26080,23384,26723,25968,25454)));return;}
+  var xhr=new XMLHttpRequest();
+  xhr.open('POST',KVDB_BASE+'/save_'+currentUser,true);
+  xhr.setRequestHeader('Content-Type','text/plain');
+  xhr.onload=function(){if(xhr.status===200){if(cb)cb(null);}else{if(cb)cb(new Error('HTTP '+xhr.status));}};
+  xhr.onerror=function(){if(cb)cb(new Error(String.fromCharCode(32593,32476,38169,35823)));};
+  xhr.send(data);
 }
 
 function downloadCloudSave(cb){
-  if(!loggedInAccount){if(cb)cb(false);return;}
-  loadGistData(function(err,data){
-    if(err||!data||!data[loggedInAccount]||!data[loggedInAccount].save){if(cb)cb(false);return;}
-    try{localStorage.setItem('xiImmortalSave',data[loggedInAccount].save);if(cb)cb(true);}catch(e){if(cb)cb(false);}
-  });
+  if(!currentUser){if(cb)cb(new Error(String.fromCharCode(26410,30331,24405)));return;}
+  var xhr=new XMLHttpRequest();
+  xhr.open('GET',KVDB_BASE+'/save_'+currentUser,true);
+  xhr.onload=function(){if(xhr.status===200){localStorage.setItem(SAVE_KEY,xhr.responseText);if(cb)cb(null);}else if(xhr.status===404){if(cb)cb(new Error(String.fromCharCode(26080,20102,35299,23384,26723)));}else{if(cb)cb(new Error('HTTP '+xhr.status));}};
+  xhr.onerror=function(){if(cb)cb(new Error(String.fromCharCode(32593,32476,38169,35823)));};
+  xhr.send();
 }
 
 function checkCloudSave(){
-  if(!loggedInAccount)return;
-  loadGistData(function(err,data){
-    if(err||!data||!data[loggedInAccount])return;
-    if(data[loggedInAccount].save){
-      var h='<div class="modal-name">'+String.fromCharCode(20113,23384,26723)+'</div><div class="modal-scroll">';
-      h+='<div style="font-size:14px;color:#555;padding:12px 0">'+String.fromCharCode(26816,27979,21040,36080,21495,20113,23384,26723,65292,26159,21542,19979,36733,35206,30422,26412,22320,23384,26723,65311)+'</div>';
-      h+='<div class="modal-btns"><button class="btn btn-sm" id="accDownload">'+String.fromCharCode(19979,36733)+'</button><button class="btn btn-sm" id="accSkip">'+String.fromCharCode(36339,36807)+'</button></div>';
-      h+='</div>';
-      $modalBox.innerHTML=h;$modalOverlay.classList.add('show');
-      document.getElementById('accDownload').addEventListener('click',function(){downloadCloudSave(function(ok){closeModal();if(ok){showFloatTip(document.body,String.fromCharCode(20113,23384,26723,24050,19979,36733),2000);location.reload();}else{showTip(String.fromCharCode(19979,36733,22833,36133));}});});
-      document.getElementById('accSkip').addEventListener('click',function(){closeModal();});
+  if(!currentUser)return;
+  var xhr=new XMLHttpRequest();
+  xhr.open('GET',KVDB_BASE+'/save_'+currentUser,true);
+  xhr.onload=function(){
+    if(xhr.status===404)return;
+    if(xhr.status===200&&xhr.responseText){
+      var cloudData=xhr.responseText;
+      var localData=localStorage.getItem(SAVE_KEY);
+      if(!localData||cloudData!==localData){
+        if(confirm(String.fromCharCode(21457,29616,20102,35299,31471,23384,26723,65292,26159,21542,19979,36733,65311))){
+          localStorage.setItem(SAVE_KEY,cloudData);
+          loadGame();refreshMaxHP();renderMain();renderDestList();renderTravelLower();renderStorage();ensureShop();renderCraft();renderBodyTrain();renderInfo();
+        }
+      }
     }
-  });
+  };
+  xhr.onerror=function(){};
+  xhr.send();
 }
 
 function startAutoUpload(){
   if(autoUploadTimer)clearInterval(autoUploadTimer);
+  if(!currentUser)return;
   autoUploadTimer=setInterval(function(){
-    if(loggedInAccount)uploadCloudSave(function(ok){});
-  },5*60*1000);
+    if(!currentUser)return;
+    uploadCloudSave(function(){});
+  },300000);
 }
 
 function restoreLogin(){
   initDeviceCode();
-  var stored=null;
-  try{stored=localStorage.getItem('loggedInAccount');}catch(e){}
-  if(stored){
-    loggedInAccount=stored;
-    startAutoUpload();
+  var savedUser=localStorage.getItem('xiCurrentUser');
+  if(savedUser){
+    loadAccounts(function(err,accounts){
+      if(!err&&accounts[savedUser]){
+        currentUser=savedUser;
+        checkCloudSave();
+        startAutoUpload();
+      }else{
+        localStorage.removeItem('xiCurrentUser');
+      }
+    });
   }
 }
-
+restoreLogin();
 function loadGame(){try{var s=localStorage.getItem(SAVE_KEY);if(!s)return false;var d=JSON.parse(s);if(!d)return false;stageIdx=d.sI||d.stageIdx||0;exp=d.exp||0;copper=d.cop||d.copper||0;playerHP=d.pHP||d.playerHP||50;playerMaxHP=d.pMHP||d.playerMaxHP||50;backpack=d.bp||d.backpack||[];warehouse=d.wh||d.warehouse||[];monsterKills=d.mk||d.monsterKills||{mosquito:0,mosquitoFemale:0};Object.keys(MONSTERS).forEach(function(k){if(!(k in monsterKills))monsterKills[k]=0;});containerOwned=d.cO||d.containerOwned||false;containerFemaleOwned=d.cFO||d.containerFemaleOwned||false;containerKillBase=d.cKB||0;containerFemaleKillBase=d.cFKB||0;craftStats=d.cs||d.craftStats||{herbPill:{crafted:0,used:0},grassKnot:{crafted:0}};Object.keys(RECIPES).forEach(function(k){if(!craftStats[k])craftStats[k]={crafted:0};});bonusHP=d.bHP||d.bonusHP||0;bonusATK=d.bATK||d.bonusATK||0;bonusDEF=d.bDEF||d.bonusDEF||0;bonusLifesteal=d.bLS||d.bonusLifesteal||0;bonusCrit=d.bC||0;bonusCritDmg=d.bCD||0;bonusDodge=d.bDo||0;bonusHit=d.bHi||0;bonusDefRat=d.bDR||0;bonusAtkRat=d.bAR||0;bonusDefSmith=d.bDS||0;bonusAtkZaiA=d.bAZ||0;bonusAtkBig=d.bAB||0;bonusAtkSnake=d.bAS||0;bonusHitSpider=d.bHS||0;bonusDodgeCentipede=d.bDC||0;bonusAtkBoar=d.bAB2||0;equipment=d.eq||d.equipment||[null,null,null,null,null,null];shopSlots=d.sh||d.shopSlots||[null,null,null,null,null,null];shopRefreshAt=d.sr||d.shopRefreshAt||0;lastTravelDest=d.lt||d.lastTravelDest||'grassland';craftLevels=d.cl||d.craftLevels||{alchemy:{lv:1,exp:0},accessory:{lv:1,exp:0},manual:{lv:1,exp:0},cook:{lv:1,exp:0}};if(!craftLevels.cook)craftLevels.cook={lv:1,exp:0};var _sl=d.sL||{};shopLevel={gridCount:_sl.gc||3,rareLevel:_sl.rl||1};skills=d.sk||{insight:0};mapExp=d.me||{};enchanted=d.en||{};variantKills=d.vk||{};if(d.sr)specialRealm=d.sr;if(d.cs2)completedSpecials=d.cs2;if(d.ss)specialStage=d.ss;if(d.spb){if(typeof d.spb==="object"&&!Array.isArray(d.spb))specialPctBonus=d.spb;}if(d.tge)trueGrassEssenceObtained=d.tge;if(d.st)stance=d.st;if(d.sP)stanceProficiency=d.sP;if(typeof d.cLv!=='undefined')cultLv=d.cLv;if(typeof d.cExp!=='undefined')cultExp=d.cExp;if(typeof d.tAL!=='undefined')tempArrayLv=d.tAL;if(d.bT)bodyTrain=d.bT;if(d.bTHP)bodyTrainBonusHP=d.bTHP;if(d.bTATK)bodyTrainBonusATK=d.bTATK;if(d.bTDEF)bodyTrainBonusDEF=d.bTDEF;if(d.cBHP||d.cBHP===0)cultBonusHP=d.cBHP;if(d.cBATK||d.cBATK===0)cultBonusATK=d.cBATK;if(d.cBDEF||d.cBDEF===0)cultBonusDEF=d.cBDEF;if(d.uR)unlockedRecipes=d.uR;if(d.cBHP||d.cBHP===0)cultBonusHP=d.cBHP;if(d.cBATK||d.cBATK===0)cultBonusATK=d.cBATK;if(d.cBDEF||d.cBDEF===0)cultBonusDEF=d.cBDEF;if(d.fac)facilities=d.fac;if(d.evtC)eventChance=d.evtC;if(d.uF)unlockedFacilities=d.uF;if(d.tLv)travelLv=d.tLv;if(d.tExp||d.tExp===0)travelExp=d.tExp;
 if(facilities.spiritField.owned||facilities.mushroomStump.owned)unlockedFacilities=true;
-collectFacilityOutput();if(d.cBHP||d.cBHP===0)cultBonusHP=d.cBHP;if(d.cBATK||d.cBATK===0)cultBonusATK=d.cBATK;if(d.cBDEF||d.cBDEF===0)cultBonusDEF=d.cBDEF;refreshMaxHP();return true;}catch(e){return false;}}
+collectFacilityOutput();if(d.cBHP||d.cBHP===0)cultBonusHP=d.cBHP;if(d.cBATK||d.cBATK===0)cultBonusATK=d.cBATK;if(d.cBDEF||d.cBDEF===0)cultBonusDEF=d.cBDEF;refreshMaxHP();return true;}catch(ex){return false;}}
 var ITEMS={
 faintSpirit:{name:'微弱灵气残影',desc:'弱小灵体在某处活动过的证据',quality:1,size:'迷你',maxStack:100,sellPrice:10,special:false,usable:true},
 mosquitoContainer:{name:'小雄蚊灵体容器',desc:'一个玻璃珠大小的金属球体，表面有着浅浅的纹路，散发着淡绿色的光，凑近听还有"嗡嗡"的声音。拥有后再击杀小雄蚊时，血量上限+1。(上限100)',quality:'1+',size:'中',maxStack:10,sellPrice:0,special:true},
