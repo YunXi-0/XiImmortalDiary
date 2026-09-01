@@ -21,15 +21,15 @@ function isValidPassword(p){return p&&p.length>=4&&p.length<=30;}
 function loadAccounts(cb){
   var xhr=new XMLHttpRequest();
   xhr.open('GET',KVDB_BASE+'/accounts',true);
-  xhr.onload=function(){if(xhr.status===200){try{var d=JSON.parse(xhr.responseText);cb(null,d||{});}catch(ex){cb(null,{});}}else{cb(null,{});}};
-  xhr.onerror=function(){cb(null,{});};
+  xhr.onload=function(){if(xhr.status===200){try{var d=JSON.parse(xhr.responseText);cb(null,d||{});}catch(ex){cb(null,{});}}else if(xhr.status===404){cb(null,{});}else{cb(new Error('HTTP '+xhr.status));}};
+  xhr.onerror=function(){cb(new Error('Network error'));};
   xhr.send();
 }
 
 function saveAccounts(data,cb){
   var xhr=new XMLHttpRequest();
   xhr.open('POST',KVDB_BASE+'/accounts',true);
-  xhr.setRequestHeader('Content-Type','application/json');
+  xhr.setRequestHeader('Content-Type','text/plain');
   xhr.onload=function(){if(cb)cb(null);};
   xhr.onerror=function(){if(cb)cb(new Error('Network error'));};
   xhr.send(JSON.stringify(data));
@@ -38,15 +38,15 @@ function saveAccounts(data,cb){
 function loadDevices(cb){
   var xhr=new XMLHttpRequest();
   xhr.open('GET',KVDB_BASE+'/devices',true);
-  xhr.onload=function(){if(xhr.status===200){try{var d=JSON.parse(xhr.responseText);cb(null,d||{});}catch(ex){cb(null,{});}}else{cb(null,{});}};
-  xhr.onerror=function(){cb(null,{});};
+  xhr.onload=function(){if(xhr.status===200){try{var d=JSON.parse(xhr.responseText);cb(null,d||{});}catch(ex){cb(null,{});}}else if(xhr.status===404){cb(null,{});}else{cb(new Error('HTTP '+xhr.status));}};
+  xhr.onerror=function(){cb(new Error('Network error'));};
   xhr.send();
 }
 
 function saveDevices(data,cb){
   var xhr=new XMLHttpRequest();
   xhr.open('POST',KVDB_BASE+'/devices',true);
-  xhr.setRequestHeader('Content-Type','application/json');
+  xhr.setRequestHeader('Content-Type','text/plain');
   xhr.onload=function(){if(cb)cb(null);};
   xhr.onerror=function(){if(cb)cb(new Error('Network error'));};
   xhr.send(JSON.stringify(data));
