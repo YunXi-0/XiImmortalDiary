@@ -12,6 +12,7 @@ var deviceCode=null;
 var gistCache=null;
 var gistCacheTime=0;
 var GIST_TOKEN=(typeof AndroidBridge!=='undefined'&&AndroidBridge.getToken)?AndroidBridge.getToken():'';
+var isAndroid=(typeof AndroidBridge!=='undefined');
 
 function initDeviceCode(){
   if(deviceCode)return;
@@ -28,49 +29,80 @@ function loadGistData(cb){
   var now=Date.now();
   if(gistCache&&now-gistCacheTime<5000){cb(null,gistCache);return;}
   var rawUrl='https://raw.githubusercontent.com/'+REPO_OWNER+'/'+REPO_NAME+'/main/'+DATA_PATH+'?t='+now;
-  var xhr=new XMLHttpRequest();
-  xhr.open('GET',rawUrl,true);
-  xhr.timeout=10000;
-  xhr.onload=function(){
-    if(xhr.status===200){
-      try{var data=JSON.parse(xhr.responseText);gistCache=data;gistCacheTime=now;cb(null,data);}
-      catch(e){cb(e);}
-    }else{cb('status:'+xhr.status);}
-  };
-  xhr.onerror=function(){cb('network error');};
-  xhr.ontimeout=function(){cb('timeout');};
-  xhr.send();
+  if(isAndroid){
+    var result=AndroidBridge.httpGetRaw(rawUrl);
+    if(result){
+      var sep=result.indexOf('|');
+      var code=parseInt(result.substring(0,sep));
+      var body=result.substring(sep+1);
+      if(code===200){
+        try{var data=JSON.parse(body);gistCache=data;gistCacheTime=now;cb(null,data);}
+        catch(e){cb(e);}
+      }else{cb('status:'+code);}
+    }else{cb('no result');}
+  }else{
+    var xhr=new XMLHttpRequest();
+    xhr.open('GET',rawUrl,true);
+    xhr.timeout=10000;
+    xhr.onload=function(){
+      if(xhr.status===200){
+        try{var data=JSON.parse(xhr.responseText);gistCache=data;gistCacheTime=now;cb(null,data);}
+        catch(e){cb(e);}
+      }else{cb('status:'+xhr.status);}
+    };
+    xhr.onerror=function(){cb('network error');};
+    xhr.ontimeout=function(){cb('timeout');};
+    xhr.send();
+  }
 }
 
 function saveGistData(data,cb){
-  if(!GIST_TOKEN){cb('no token');return;}
   var getUrl='https://api.github.com/repos/'+REPO_OWNER+'/'+REPO_NAME+'/contents/'+DATA_PATH;
-  var getxhr=new XMLHttpRequest();
-  getxhr.open('GET',getUrl,true);
-  getxhr.setRequestHeader('Authorization','token '+GIST_TOKEN);
-  getxhr.timeout=10000;
-  getxhr.onload=function(){
+  if(isAndroid){
+    var getResult=AndroidBridge.httpGet(getUrl);
     var sha=null;
-    if(getxhr.status===200){
-      try{sha=JSON.parse(getxhr.responseText).sha;}catch(e){}
+    if(getResult){
+      var sep=getResult.indexOf('|');
+      var code=parseInt(getResult.substring(0,sep));
+      var body=getResult.substring(sep+1);
+      if(code===200){try{sha=JSON.parse(body).sha;}catch(e){}}
     }
-    var body=JSON.stringify({message:'update accounts',content:btoa(unescape(encodeURIComponent(JSON.stringify(data)))),sha:sha});
-    var putxhr=new XMLHttpRequest();
-    putxhr.open('PUT',getUrl,true);
-    putxhr.setRequestHeader('Authorization','token '+GIST_TOKEN);
-    putxhr.setRequestHeader('Content-Type','application/json');
-    putxhr.timeout=10000;
-    putxhr.onload=function(){
-      if(putxhr.status===200||putxhr.status===201){try{gistCache=data;gistCacheTime=Date.now();}catch(e){}cb(null);}
-      else{cb('status:'+putxhr.status);}
+    var content=btoa(unescape(encodeURIComponent(JSON.stringify(data))));
+    var putBody=JSON.stringify({message:'update accounts',content:content,sha:sha});
+    var putResult=AndroidBridge.httpPut(getUrl,putBody);
+    if(putResult){
+      var sep2=putResult.indexOf('|');
+      var putCode=parseInt(putResult.substring(0,sep2));
+      if(putCode===200||putCode===201){try{gistCache=data;gistCacheTime=Date.now();}catch(e){}cb(null);}
+      else{cb('status:'+putCode);}
+    }else{cb('no result');}
+  }else{
+    if(!GIST_TOKEN){cb('no token');return;}
+    var getxhr=new XMLHttpRequest();
+    getxhr.open('GET',getUrl,true);
+    getxhr.setRequestHeader('Authorization','token '+GIST_TOKEN);
+    getxhr.timeout=10000;
+    getxhr.onload=function(){
+      var sha=null;
+      if(getxhr.status===200){try{sha=JSON.parse(getxhr.responseText).sha;}catch(e){}}
+      var body=JSON.stringify({message:'update accounts',content:btoa(unescape(encodeURIComponent(JSON.stringify(data)))),sha:sha});
+      var putxhr=new XMLHttpRequest();
+      putxhr.open('PUT',getUrl,true);
+      putxhr.setRequestHeader('Authorization','token '+GIST_TOKEN);
+      putxhr.setRequestHeader('Content-Type','application/json');
+      putxhr.timeout=10000;
+      putxhr.onload=function(){
+        if(putxhr.status===200||putxhr.status===201){try{gistCache=data;gistCacheTime=Date.now();}catch(e){}cb(null);}
+        else{cb('status:'+putxhr.status);}
+      };
+      putxhr.onerror=function(){cb('network error');};
+      putxhr.ontimeout=function(){cb('timeout');};
+      putxhr.send(body);
     };
-    putxhr.onerror=function(){cb('network error');};
-    putxhr.ontimeout=function(){cb('timeout');};
-    putxhr.send(body);
-  };
-  getxhr.onerror=function(){cb('network error');};
-  getxhr.ontimeout=function(){cb('timeout');};
-  getxhr.send();
+    getxhr.onerror=function(){cb('network error');};
+    getxhr.ontimeout=function(){cb('timeout');};
+    getxhr.send();
+  }
 }
 
 function showAccountModal(){
